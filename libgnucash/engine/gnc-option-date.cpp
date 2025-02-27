@@ -525,10 +525,10 @@ gnc_relative_date_to_time64(RelativeDatePeriod period)
             break;
         case RelativeDateOffset::QUARTER:
         {
-            auto delta = (now.tm_mon >= acct_per.tm_mon ?
-                          ( now.tm_mon - acct_per.tm_mon) % 3 :
-                          (3 - acct_per.tm_mon - now.tm_mon) % 3);
-            now.tm_mon = now.tm_mon - delta;
+            auto delta = (12 + now.tm_mon - acct_per.tm_mon) % 3;
+            if (delta == 0 && now.tm_mday < acct_per.tm_mday) 
+                delta = 3;
+            now.tm_mon -= delta;
         }
             [[fallthrough]];
         case RelativeDateOffset::THREE:
