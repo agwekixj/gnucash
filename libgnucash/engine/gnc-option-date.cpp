@@ -536,9 +536,10 @@ gnc_relative_date_to_time64(RelativeDatePeriod period)
 
     switch (checked_reldate(period).m_type)
     {
-        case RelativeDateType::LAST:
+        case RelativeDateType::ABSOLUTE:
+	case RelativeDateType::LAST:
         case RelativeDateType::NEXT:
-            // Do nothing for LAST and NEXT.
+            // Do nothing
             break;
         case RelativeDateType::START:
             now.tm_mday = offset == RelativeDateOffset::QUARTER && acct_per.tm_mday > 1 ? acct_per.tm_mday : 1;
