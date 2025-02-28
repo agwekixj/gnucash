@@ -463,26 +463,6 @@ normalize_reldate_tm(struct tm& now)
     }
 }
 
-static void
-reldate_set_day_and_time(struct tm& now, RelativeDateType type)
-{
-    if (type == RelativeDateType::START)
-    {
-        gnc_tm_set_day_start(&now);
-        now.tm_mday = 1;
-    }
-    else if (type == RelativeDateType::END)
-    {
-        /* Ensure that the month is between 0 and 11*/
-        auto year_delta = (now.tm_mon / 12) + (now.tm_mon < 0 ? -1 : 0);
-        auto month = now.tm_mon - (12 * year_delta);
-        auto year = now.tm_year + year_delta;
-        now.tm_mday = days_in_month(month, year);
-        gnc_tm_set_day_end(&now);
-    }
-    // Do nothing for LAST and NEXT.
-};
-
 time64
 gnc_relative_date_to_time64(RelativeDatePeriod period)
 {
@@ -502,10 +482,12 @@ gnc_relative_date_to_time64(RelativeDatePeriod period)
                             GNC_PREF_START_CHOICE_ABS))
         acct_per = static_cast<tm>(GncDateTime(gnc_accounting_period_fiscal_start()));
 
-    switch(reldate_offset(period))
+    RelativeDateOffset offset = reldate_offset(period);
+
+    switch(offset)
     {
         case RelativeDateOffset::NONE:
-// Report on today so nothing to do
+            // Report on today so nothing to do
             break;
         case RelativeDateOffset::YEAR:
             if (reldate_is_prev(period))
@@ -517,7 +499,7 @@ gnc_relative_date_to_time64(RelativeDatePeriod period)
             else if (gnc_relative_date_is_ending(period))
                 now.tm_mon = 11;
             break;
-       case RelativeDateOffset::SIX:
+        case RelativeDateOffset::SIX:
             if (reldate_is_prev(period))
                 now.tm_mon -= 6;
             else if (reldate_is_next(period))
@@ -537,9 +519,9 @@ gnc_relative_date_to_time64(RelativeDatePeriod period)
             else if (reldate_is_next(period))
                 now.tm_mon += 3;
             if (gnc_relative_date_is_ending(period))
-                now.tm_mon += 2;
+                now.tm_mon += offset == RelativeDateOffset::QUARTER && acct_per.tm_mday > 1 ? 3 : 2;
             break;
-       case RelativeDateOffset::MONTH:
+        case RelativeDateOffset::MONTH:
             if (reldate_is_prev(period))
                 --now.tm_mon;
             else if (reldate_is_next(period))
@@ -551,7 +533,30 @@ gnc_relative_date_to_time64(RelativeDatePeriod period)
             else if (reldate_is_next(period))
                 now.tm_mday += 7;
     }
-    reldate_set_day_and_time(now, checked_reldate(period).m_type);
+
+    switch (checked_reldate(period).m_type)
+    {
+        case RelativeDateType::LAST:
+        case RelativeDateType::NEXT:
+            // Do nothing for LAST and NEXT.
+            break;
+        case RelativeDateType::START:
+            now.tm_mday = offset == RelativeDateOffset::QUARTER && acct_per.tm_mday > 1 ? acct_per.tm_mday : 1;
+            gnc_tm_set_day_start(&now);
+            break;
+        case RelativeDateType::END:
+        {
+            /* Ensure that the month is between 0 and 11*/
+            auto year_delta = (now.tm_mon / 12) + (now.tm_mon < 0 ? -1 : 0);
+            auto month = now.tm_mon - (12 * year_delta);
+            auto year = now.tm_year + year_delta;
+            now.tm_mday = days_in_month(month, year);
+	        if (offset == RelativeDateOffset::QUARTER && acct_per.tm_mday > 1 && acct_per.tm_mday <= now.tm_mday)
+	            now.tm_mday = acct_per.tm_mday - 1;
+            gnc_tm_set_day_end(&now);
+        }
+    }
+
     normalize_reldate_tm(now);
     return static_cast<time64>(GncDateTime(now));
 }
