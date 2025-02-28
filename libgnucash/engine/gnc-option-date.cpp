@@ -519,7 +519,7 @@ gnc_relative_date_to_time64(RelativeDatePeriod period)
             else if (reldate_is_next(period))
                 now.tm_mon += 3;
             if (gnc_relative_date_is_ending(period))
-                now.tm_mon += offset == RelativeDateOffset::QUARTER && acct_per.tm_mday > 1 ? 3 : 2;
+                now.tm_mon += (offset == RelativeDateOffset::QUARTER && acct_per.tm_mday > 1 ? 3 : 2);
             break;
         case RelativeDateOffset::MONTH:
             if (reldate_is_prev(period))
