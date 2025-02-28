@@ -552,8 +552,8 @@ gnc_relative_date_to_time64(RelativeDatePeriod period)
             auto month = now.tm_mon - (12 * year_delta);
             auto year = now.tm_year + year_delta;
             now.tm_mday = days_in_month(month, year);
-	        if (offset == RelativeDateOffset::QUARTER && acct_per.tm_mday > 1 && acct_per.tm_mday <= now.tm_mday)
-	            now.tm_mday = acct_per.tm_mday - 1;
+            if (offset == RelativeDateOffset::QUARTER && acct_per.tm_mday > 1 && acct_per.tm_mday <= now.tm_mday)
+                now.tm_mday = acct_per.tm_mday - 1;
             gnc_tm_set_day_end(&now);
         }
     }
