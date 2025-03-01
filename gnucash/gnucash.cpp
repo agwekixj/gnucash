@@ -72,7 +72,6 @@ namespace bl = boost::locale;
 
 /* This static indicates the debugging module that this .o belongs to. */
 static QofLogModule log_module = GNC_MOD_GUI;
-static gchar *userdata_migration_msg = NULL;
 
 static void
 load_gnucash_plugins()
@@ -178,9 +177,8 @@ scm_run_gnucash (void *data, [[maybe_unused]] int argc, [[maybe_unused]] char **
         gnc_update_splash_screen (checking, GNC_SPLASH_PERCENTAGE_UNKNOWN);
         GncQuotes quotes;
         auto found = (bl::format (std::string{_("Found Finance::Quote version {1}.")}) % quotes.version()).str();
-        auto quote_sources = quotes.sources_as_glist();
+        auto quote_sources = quotes.sources();
         gnc_quote_source_set_fq_installed (quotes.version().c_str(), quote_sources);
-        g_list_free_full (quote_sources, g_free);
         gnc_update_splash_screen (found.c_str(), GNC_SPLASH_PERCENTAGE_UNKNOWN);
     }
     catch (const GncQuoteException& err)
@@ -208,18 +206,6 @@ scm_run_gnucash (void *data, [[maybe_unused]] int argc, [[maybe_unused]] char **
         gnc_ui_new_user_dialog();
     }
 
-    if (userdata_migration_msg)
-    {
-        GtkWidget *dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL,
-                                                   GTK_MESSAGE_INFO,
-                                                   GTK_BUTTONS_OK,
-                                                   "%s",
-                                                   userdata_migration_msg);
-        gnc_destroy_splash_screen();
-        gtk_dialog_run(GTK_DIALOG(dialog));
-        gtk_widget_destroy (dialog);
-        g_free (userdata_migration_msg);
-    }
     /* Ensure temporary preferences are temporary */
     gnc_prefs_reset_group (GNC_PREFS_GROUP_WARNINGS_TEMP);
 
@@ -310,7 +296,8 @@ main(int argc, char ** argv)
         << "\n"
         // Translators: Do not translate $DISPLAY! It is an environment variable for X11
         << _("Error: could not initialize graphical user interface and option add-price-quotes was not set.\n"
-        "Perhaps you need to set the $DISPLAY environment variable?");
+        "Perhaps you need to set the $DISPLAY environment variable?")
+        << "\n";
         return 1;
     }
 

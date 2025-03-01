@@ -30,11 +30,10 @@
 (use-modules (sw_engine))
 (use-modules (sw_app_utils))
 (use-modules (gnucash report))
-(use-modules (system vm coverage))
 
 (setlocale LC_ALL "C")
 
-(define (run-test-proper)
+(define (run-test)
   (test-runner-factory gnc:test-runner)
   (test-begin "commodity-utils")
   ;; Tests go here
@@ -48,24 +47,8 @@
   (test-get-commodity-totalavg-prices)
   (test-get-commodity-inst-prices)
   (test-weighted-average)
+  (test-get-match-commodity-splits-sorted)
   (test-end "commodity-utils"))
-
-(define (coverage-test)
-  (let* ((currfile (dirname (current-filename)))
-         (path (string-take currfile (string-rindex currfile #\/))))
-    (add-to-load-path path))
-  (call-with-values
-      (lambda()
-        (with-code-coverage run-test-proper))
-    (lambda (data result)
-      (let ((port (open-output-file "/tmp/lcov.info")))
-        (coverage-data->lcov data port)
-        (close port)))))
-
-(define (run-test)
-  (if #f                                ;switch to #t to run coverage
-      (coverage-test)
-      (run-test-proper)))
 
 (define test-accounts
   (list "Root" (list (cons 'type ACCT-TYPE-ROOT))
@@ -357,7 +340,7 @@
       (test-equal "DMLR 500 shares" 500 ((caadr (assoc DMLR return-alist)) 'total #f))
       (test-equal "DMLR EUR13631.27" 1364127/100 (gnc-numeric-convert ((cdadr (assoc DMLR return-alist)) 'total #f) 100 GNC-HOW-RND-ROUND)))
     (test-end "foreign-DEM>EUR")
-    (test-begin "foreign-3way-DEM>EUR")
+    (test-begin "foreign-3way-gbp->dem->eur->usd")
     ;; Three-way conversion, gbp->dem->eur->usd
     ;; Too many levels for resolve-unknown-comm to resolve.
     (collect gbp-dem-col  10000/100 23665543/100000)
@@ -367,7 +350,7 @@
            (return-alist  (gnc:resolve-unknown-comm sumlist USD)))
       (test-equal "Shares fails" #f ((caadr (assoc RDSA return-alist)) 'total #f))
       (test-equal "Value fails" #f ((cdadr (assoc RDSA return-alist)) 'total #f)))
-    (test-end "foreign-3way-GBP>DEM")
+    (test-end "foreign-3way-gbp->dem->eur->usd")
     (test-begin "foreign-3way-DEM>GBP")
     ;; Three-way conversion, gbp->dem->eur->usd
     ;; Too many levels for resolve-unknown-comm to resolve.
@@ -673,7 +656,7 @@
                           (gnc-dmy2time64-neutral 20 02 2016)
                           #f #f)))
         (test-equal "gnc:case-exchange-time-fn weighted-average 20/02/2012"
-          307/5
+          0
           (gnc:gnc-monetary-amount
            (exchange-fn
             (gnc:make-gnc-monetary AAPL 1)
@@ -681,7 +664,7 @@
             (gnc-dmy2time64-neutral 20 02 2012))))
 
         (test-equal "gnc:case-exchange-time-fn weighted-average 20/02/2014"
-          9366/125
+          307/5
           (gnc:gnc-monetary-amount
            (exchange-fn
             (gnc:make-gnc-monetary AAPL 1)
@@ -705,7 +688,7 @@
             (gnc-dmy2time64-neutral 11 08 2014))))
 
         (test-equal "gnc:case-exchange-time-fn weighted-average 22/10/2015"
-          27663/325
+          9366/125
           (gnc:gnc-monetary-amount
            (exchange-fn
             (gnc:make-gnc-monetary AAPL 1)
@@ -726,7 +709,7 @@
                           (gnc-dmy2time64-neutral 20 02 2016)
                           #f #f)))
         (test-equal "gnc:case-exchange-time-fn average-cost 20/02/2012"
-          14127/175
+          0
           (gnc:gnc-monetary-amount
            (exchange-fn
             (gnc:make-gnc-monetary AAPL 1)
@@ -774,3 +757,67 @@
 
       (teardown))))
 
+(define (test-get-match-commodity-splits-sorted)
+  (test-group-with-cleanup "test-get-match-commodity-splits-sorted"
+    (let* ((account-alist (setup #f))
+           (book  (gnc-get-current-book))
+           (iso-date (qof-date-format-get-string QOF-DATE-FORMAT-ISO))
+           (comm-table (gnc-commodity-table-get-table book))
+           (MSFT (gnc-commodity-table-lookup comm-table "NASDAQ" "MSFT"))
+           (AAPL (gnc-commodity-table-lookup comm-table "NASDAQ" "AAPL")))
+
+      (define (get-splits date commodity)
+        (gnc:get-match-commodity-splits-sorted
+         (gnc-account-get-descendants-sorted (gnc-get-current-root-account))
+         date commodity))
+
+      (define (split->date split)
+        (gnc-print-time64 (xaccTransGetDate (xaccSplitGetParent split)) iso-date))
+
+      (let ((AAPL-splits (get-splits (gnc-dmy2time64-neutral 5 12 2014) AAPL)))
+        (test-equal "2 AAPL splits up to 05/12/14"
+                    '("2013-08-09" "2014-07-11")
+                    (map split->date AAPL-splits)))
+
+      (let ((AAPL-splits (get-splits #f AAPL)))
+        (test-equal "4 AAPL splits undated"
+                    '("2013-08-09" "2014-07-11" "2015-10-23" "2015-10-23")
+                    (map split->date AAPL-splits)))
+
+      (let ((MSFT-splits (get-splits (gnc-dmy2time64-neutral 5 12 2014) MSFT)))
+        (test-equal "3 MSFT splits up to 05/12/14"
+                    '("2012-01-15" "2014-12-05" "2014-12-05")
+                    (map split->date MSFT-splits)))
+
+      (let ((MSFT-splits (get-splits #f MSFT)))
+        (test-equal "6 MSFT splits undated"
+                    '("2012-01-15" "2014-12-05" "2014-12-05" "2015-04-02"
+                      "2016-03-11" "2016-03-11")
+                    (map split->date MSFT-splits)))
+
+      (let ((AAPL-splits (get-splits (gnc-dmy2time64-neutral 20 02 2016) AAPL)))
+        (test-equal "4 AAPL splits up to 20/02/16"
+                    '("2013-08-09" "2014-07-11" "2015-10-23" "2015-10-23")
+                    (map split->date AAPL-splits)))
+
+      (let ((MSFT-splits (get-splits (gnc-dmy2time64-neutral 20 02 2016) MSFT)))
+        (test-equal "4 MSFT splits up to 20/02/16"
+                    '("2012-01-15" "2014-12-05" "2014-12-05" "2015-04-02")
+                    (map split->date MSFT-splits)))
+
+      (let ((any-splits (get-splits (gnc-dmy2time64-neutral 5 12 2014) #f)))
+        (test-equal "11 ANY splits up to 05/12/14"
+                    '("2012-01-15" "2012-01-15" "2012-01-20" "2012-02-20"
+                      "2012-02-20" "2013-08-09" "2014-07-11" "2014-08-08"
+                      "2014-08-08" "2014-12-05" "2014-12-05")
+                    (map split->date any-splits)))
+
+      (let ((all-splits (get-splits #f #f)))
+        (test-equal "16 ALL splits undated"
+                    '("2012-01-15" "2012-01-15" "2012-01-20" "2012-02-20"
+                      "2012-02-20" "2013-08-09" "2014-07-11" "2014-08-08"
+                      "2014-08-08" "2014-12-05" "2014-12-05" "2015-04-02"
+                      "2015-10-23" "2015-10-23" "2016-03-11" "2016-03-11")
+                    (map split->date all-splits)))
+
+      (teardown))))

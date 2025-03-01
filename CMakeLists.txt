@@ -6,9 +6,17 @@ cmake_minimum_required (VERSION 3.14.5)
 if (POLICY CMP0094)
   cmake_policy(SET CMP0094 NEW)
 endif()
+# CMake 3.30+ Use Boost's builtin BoostConfig.cmake instead of
+# FindBoost, the latter of which is removed. Setting this policy to OLD
+# temporarily restores it. BoostConfig.cmake was introduced in Boost
+# 1.70.  A fair number of distros are still shipping Boost 1.69 in
+# "legacy" versions so make it OLD for the 5.x series and NEW for 6.x.
+if (POLICY CMP0167)
+  cmake_policy(SET CMP0167 OLD)
+endif()
 
 project (gnucash
-    VERSION 5.4
+    VERSION 5.10
 )
 
 enable_testing()
@@ -54,6 +62,10 @@ option (WITH_OFX "compile with ofx support (needs LibOFX)" ON)
 option (WITH_PYTHON "enable python plugin and bindings" OFF)
 option (ENABLE_BINRELOC "compile with binary relocation support" ON)
 option (DISABLE_NLS "do not use Native Language Support" OFF)
+option (COVERAGE "Instrument a Debug or Asan build for coverage reporting" OFF)
+option (GUILE_COVERAGE "Compute testing coverage of Scheme code. WARNING: 15X slowdown!" OFF)
+option (LEAKS "Report leaks for tests in a non-Apple Asan build." OFF)
+option (ODR "Report One Definition Rule violations in tests in a non-Apple Asan build." OFF)
 # ############################################################
 
 # These are also settable from the command line in a similar way.
@@ -130,7 +142,7 @@ else()
   if (BASH)
     set(SHELL ${BASH})
   else()
-    message(SEND_ERROR "Can't find a suitable bash executable. Please set GNC_SHELL.")
+    message(SEND_ERROR "Can't find a suitable bash executable. Please install bash or set GNC_SHELL.")
   endif()
 endif()
 
@@ -148,16 +160,25 @@ if (GNC_VCS_INFO_RESULT EQUAL 0)
   # if building from VCS, we need git
   find_package(Git)
   if (NOT GIT_FOUND)
-    message(SEND_ERROR "Looks like we're building from version control, but can't find git executable. Please set GIT_EXECUTABLE.")
+    message(SEND_ERROR "Looks like we're building from version control, but can't find git executable. Please install git or set GIT_EXECUTABLE.")
   endif()
+endif()
+
+# Determine whether or not we have to generate a gnc-vcs-info.h file
+# Distribution tarballs have this file in the source tree
+# Git checkouts or zipfiles downloaded straight from github won't have it
+# and require us to build it.
+if (BUILDING_FROM_VCS OR NOT EXISTS "${CMAKE_SOURCE_DIR}/libgnucash/core-utilsgnc-vcs-info.h")
   set(VCS_INFO_BASE_DIR ${CMAKE_BINARY_DIR})
+  set(GENERATE_VCS_INFO "Yes")
 else()
   set(VCS_INFO_BASE_DIR ${CMAKE_SOURCE_DIR})
+  set(GENERATE_VCS_INFO "No")
 endif()
-# The location of gnc-vcs-info.h depends on whether we build from VCS or not
-# And this file is needed in several other build rules, so we define its
-# location once here.
-set(VCS_INFO_FILE ${VCS_INFO_BASE_DIR}/libgnucash/core-utils/gnc-vcs-info.h)
+# As the file's path is needed by several other build rules, we already define
+# that here. The actual build rules (if needed) are in libgnucash/core-utils.
+set(VCS_INFO_FILE ${VCS_INFO_BASE_DIR}/libgnucash/core-utils/gnc-vcs-info.h CACHE STRING "path to gnc-vcs-info.h file")
+
 
 if (WIN32)
   # Help Windows find the various dependencies. We assume here that the standard advice for building
@@ -274,7 +295,6 @@ endif()
 # SWIG
 find_package (SWIG 3.0.12 REQUIRED)
 include (${SWIG_USE_FILE})
-string(REGEX MATCH "^[0-9]+[.]" SWIG_MAJOR ${SWIG_VERSION})
 
 # Find Guile and determine which version we are using.
 # Look for guile versions in this order: 3.0 > 2.2 > 2.0
@@ -496,7 +516,7 @@ endif()
 # ############################################################
 
 if (WITH_PYTHON)
-  set (PYTHON_MIN_VERSION 3.6.0)
+  set (PYTHON_MIN_VERSION 3.8.0)
   if (NOT DEFINED Python3_FIND_UNVERSIONED_NAMES)
     set (Python3_FIND_UNVERSIONED_NAMES FIRST)
   endif()
@@ -507,7 +527,7 @@ if (WITH_PYTHON)
 
   # Determine where to install the python libraries.
   execute_process(
-    COMMAND ${Python3_EXECUTABLE} -c "from distutils import sysconfig; print(sysconfig.get_python_lib(prefix='${CMAKE_INSTALL_PREFIX}', plat_specific=True))"
+    COMMAND ${Python3_EXECUTABLE} -c "from sysconfig import get_path; print(get_path('platlib', 'posix_prefix', {'platbase': '${CMAKE_INSTALL_PREFIX}'}))"
     RESULT_VARIABLE PYTHON_SYSCONFIG_RESULT
     OUTPUT_VARIABLE PYTHON_SYSCONFIG_OUTPUT
     ERROR_VARIABLE PYTHON_SYSCONFIG_ERROR
@@ -541,8 +561,7 @@ get_filename_component(PERL_DIR ${PERL_EXECUTABLE} DIRECTORY)
 find_program(POD2MAN_EXECUTABLE pod2man HINTS ${PERL_DIR})
 
 #ICU
-pkg_check_modules (ICU4C REQUIRED icu-uc)
-pkg_check_modules (ICU4C_I18N REQUIRED icu-i18n)
+find_package(ICU REQUIRED COMPONENTS uc i18n)
 
 pkg_check_modules (LIBSECRET libsecret-1>=0.18)
 IF (LIBSECRET_FOUND)
@@ -561,23 +580,9 @@ find_package (Boost 1.67.0 COMPONENTS date_time filesystem locale program_option
 if (Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
   set(HAVE_BOOST 1)
-else()
-  find_package (Boost 1.60.0 REQUIRED COMPONENTS date_time regex locale filesystem system program_options)
-  if (Boost_FOUND)
-    include (CheckIncludeFileCXX)
-    set(CMAKE_REQUIRED_FLAGS "-std=c++17")
-    set(CMAKE_REQUIRED_INCLUDES ${Boost_INCLUDE_DIR})
-    check_include_file_cxx("boost/locale.hpp" AUTO_PTR)
-    unset(CMAKE_REQUIRED_FLAGS)
-    unset(CMAKE_REQUIRED_INCLUDES)
-    if(AUTO_PTR)
-      include_directories(${Boost_INCLUDE_DIRS})
-      set(HAVE_BOOST 1)
-    endif()
-  endif()
 endif()
 if (NOT HAVE_BOOST)
-message (SEND_ERROR "A suitable Boost is not installed, and is required. GnuCash requires that Boost be compatible and compiled with C++17. Boost 1.67 is the first compatible release but some distributions have patched earlier ones to work with C++17. Please install it and ensure that the following libraries are built: date_time, filesystem, locale, regex, program_options and system.")
+message (SEND_ERROR "A suitable Boost is not installed, and is required. GnuCash requires that Boost be compatible and compiled with C++17. Please install it and ensure that the following libraries are built: date_time, filesystem, locale, regex, program_options and system.")
 endif()
 
 
@@ -608,6 +613,48 @@ endif()
 if (MINGW)
   set( CMAKE_C_FLAGS "-Werror -Wall -Wmissing-prototypes -Wmissing-declarations ${CMAKE_C_FLAGS}")
   set( CMAKE_CXX_FLAGS "-DWINVER=0x0500 -D_EMULATE_GLIBC=0 ${CMAKE_CXX_FLAGS}") # Workaround for bug in gtest on mingw, see https://github.com/google/googletest/issues/893 and https://github.com/google/googletest/issues/920
+endif()
+
+if (APPLE)
+  execute_process(COMMAND clang --print-file-name=libclang_rt.asan_osx_dynamic.dylib
+    OUTPUT_VARIABLE ASAN_DYNAMIC_LIB
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(ASAN_DYNAMIC_LIB_ENV "DYLD_INSERT_LIBRARIES=${ASAN_DYNAMIC_LIB}")
+  set(ASAN_BUILD_OPTIONS fast_unwind_on_malloc=0)
+elseif(UNIX)
+  execute_process(COMMAND gcc -print-file-name=libasan.so OUTPUT_VARIABLE LIBASAN_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process(COMMAND gcc -print-file-name=libstdc++.so OUTPUT_VARIABLE LIBSTDCXX_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(PRELOADS "${LIBASAN_PATH}:${LIBSTDCXX_PATH}")
+  set(ASAN_BUILD_OPTIONS "detect_leaks=0:fast_unwind_on_malloc=0")
+  set(ASAN_DYNAMIC_LIB_ENV LD_PRELOAD=${PRELOADS})
+endif ()
+set(ASAN_LINK_OPTIONS -fsanitize=address -fsanitize=undefined)
+if (COVERAGE OR GUILE_COVERAGE)
+  include(GncCoverage)
+endif()
+if (COVERAGE)
+  set(COVERAGE_COMPILE_OPTION --coverage)
+  add_compile_options("$<$<CONFIG:Debug>:${COVERAGE_COMPILE_OPTION}>")
+  add_link_options("$<$<CONFIG:Debug>:${COVERAGE_COMPILE_OPTION}>")
+  list(APPEND ASAN_LINK_OPTIONS ${COVERAGE_COMPILE_OPTION})
+endif()
+set(ASAN_COMPILE_OPTIONS -g ${ASAN_LINK_OPTIONS})
+add_compile_options("$<$<CONFIG:Asan>:${ASAN_COMPILE_OPTIONS}>")
+add_link_options("$<$<CONFIG:Asan>:${ASAN_LINK_OPTIONS}>")
+# See https://github.com/google/sanitizers/wiki/AddressSanitizerFlags#run-time-flags
+set(ASAN_TEST_OPTIONS fast_unwind_on_malloc=0)
+if (UNIX AND NOT APPLE)
+  if (LEAKS)
+    list(APPEND ASAN_TEST_OPTIONS detect_leaks=1)
+  else()
+    list(APPEND ASAN_TEST_OPTIONS detect_leaks=0)
+  endif()
+  if (ODR)
+    list(APPEND ASAN_TEST_OPTIONS detect_odr_violation=2)
+  else()
+    list(APPEND ASAN_TEST_OPTIONS detect_odr_violation=0)
+  endif()
+  string(REPLACE ";" ":" ASAN_TEST_OPTIONS "${ASAN_TEST_OPTIONS}")
 endif()
 
 if (APPLE AND WITH_GNUCASH)
@@ -650,6 +697,10 @@ add_custom_target(check
   COMMAND ${CMAKE_CTEST_COMMAND}
 )
 
+if (COVERAGE)
+  add_dependencies(check lcov-initialize)
+endif()
+
 set(gnucash_DOCS
     AUTHORS
     ChangeLog.1999
@@ -676,6 +727,7 @@ set(gnucash_DOCS
     ChangeLog.2020
     ChangeLog.2021
     ChangeLog.2022
+    ChangeLog.2023
     DOCUMENTERS
     HACKING
     LICENSE
@@ -793,6 +845,13 @@ add_definitions (-DHAVE_CONFIG_H)
 set (CONFIG_H ${CMAKE_CURRENT_BINARY_DIR}/common/config.h)
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/common/config.h.cmake.in ${CONFIG_H})
 
+# The doxygen developer documentation
+find_program(DOXYGEN doxygen)
+if (NOT ${DOXYGEN} STREQUAL "DOXYGEN-NOTFOUND")
+  configure_file(doxygen.cfg.in doxygen.cfg)
+  add_custom_target(doc ${DOXYGEN} doxygen.cfg)
+endif()
+
 # The subdirectories
 add_subdirectory (borrowed)
 add_subdirectory (data)
@@ -834,7 +893,10 @@ endif()
 set(DIST_FILE "${PACKAGE_PREFIX}.tar")
 
 set(toplvl_DIST_local ${gnucash_DOCS}
-  CMakeLists.txt README)
+    doxygen.cfg.in
+    doxygen_main_page.c
+    CMakeLists.txt
+    README)
 
 
 set_local_dist(toplvl_DIST ${toplvl_DIST_local})

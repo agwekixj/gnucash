@@ -76,7 +76,7 @@ set (gnc_gnome_SOURCES
   dialog-doclink.c
   dialog-billterms.c
   dialog-choose-owner.c
-  dialog-commodities.c
+  dialog-commodities.cpp
   dialog-customer.c
   dialog-custom-report.c
   dialog-date-close.c
@@ -98,7 +98,7 @@ set (gnc_gnome_SOURCES
   dialog-report-column-view.cpp
   dialog-report-style-sheet.cpp
   dialog-sx-editor.c
-  dialog-sx-from-trans.c
+  dialog-sx-from-trans.cpp
   dialog-sx-since-last-run.c
   dialog-tax-info.c
   dialog-vendor.c
@@ -109,18 +109,18 @@ set (gnc_gnome_SOURCES
   gnc-plugin-business.c
   gnc-plugin-register.c
   gnc-plugin-report-system.c
-  gnc-plugin-page-account-tree.c
-  gnc-plugin-page-budget.c
-  gnc-plugin-page-invoice.c
-  gnc-plugin-page-owner-tree.c
-  gnc-plugin-page-register.c
+  gnc-plugin-page-account-tree.cpp
+  gnc-plugin-page-budget.cpp
+  gnc-plugin-page-invoice.cpp
+  gnc-plugin-page-owner-tree.cpp
+  gnc-plugin-page-register.cpp
   gnc-plugin-page-report.cpp
-  gnc-plugin-page-sx-list.c
+  gnc-plugin-page-sx-list.cpp
   gnc-split-reg.c
   reconcile-view.c
   search-owner.c
   top-level.c
-  window-reconcile.c
+  window-reconcile.cpp
   window-report.cpp
   window-autoclear.c
 )
@@ -163,6 +163,9 @@ if (MAC_INTEGRATION)
   target_link_libraries(gnc-gnome ${OSX_EXTRA_LIBRARIES})
 endif()
 
+if (COVERAGE)
+  add_coverage_target(gnc-gnome)
+endif()
 
 install(TARGETS gnc-gnome
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -172,7 +175,7 @@ install(TARGETS gnc-gnome
 # No headers to install
 
 set (GNC_APPDATA_IN ${CMAKE_CURRENT_BINARY_DIR}/gnucash.appdata.xml.in)
-if (NOT BUILDING_FROM_VCS)
+if (NOT GENERATE_VCS_INFO)
     # We're building from a dist tarball.
     # As a convenience to packagers we have included a pretranslated
     # intermediate appdata file in the dist tarball.
@@ -252,7 +255,7 @@ set_local_dist(gnome_DIST_local
         CMakeLists.txt gnome.i gnucash.appdata.xml.in.in gnucash.desktop.in.in
         gnucash.releases.xml ${gnc_gnome_noinst_HEADERS} ${gnc_gnome_SOURCES} ${gnome_SCHEME})
 
-dist_add_generated(${BUILDING_FROM_VCS} gnucash.appdata.xml.in)
+dist_add_generated(${GENERATE_VCS_INFO} gnucash.appdata.xml.in)
 add_dependencies(gnucash-appdata dist-gnucash-gnome-gnucash-appdata-xml-in)
 
 set(gnome_DIST ${gnome_DIST_local} ${test_gnome_DIST} PARENT_SCOPE)

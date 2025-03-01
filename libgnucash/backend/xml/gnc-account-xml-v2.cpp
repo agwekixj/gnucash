@@ -27,7 +27,7 @@
 #include <config.h>
 #include <stdlib.h>
 #include <string.h>
-#include <AccountP.h>
+#include <AccountP.hpp>
 #include <Account.h>
 
 #include "gnc-xml-helper.h"
@@ -375,7 +375,7 @@ account_parent_handler (xmlNodePtr node, gpointer act_pdata)
     parent = xaccAccountLookup (gid, pdata->book);
     if (!parent)
     {
-        g_free (gid);
+        guid_free (gid);
         g_return_val_if_fail (parent, FALSE);
     }
 

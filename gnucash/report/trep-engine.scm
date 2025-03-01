@@ -243,19 +243,19 @@ in the Options panel."))
                   (cons 'sortkey (list SPLIT-ACTION))
                   (cons 'split-sortvalue xaccSplitGetAction)
                   (cons 'text (G_ "Number/Action"))
-                  (cons 'renderer-fn #f))
+                  (cons 'renderer-fn xaccSplitGetAction))
 
             (list 'number
                   (cons 'sortkey (list SPLIT-TRANS TRANS-NUM))
                   (cons 'split-sortvalue (compose xaccTransGetNum xaccSplitGetParent))
                   (cons 'text (G_ "Number"))
-                  (cons 'renderer-fn #f)))
+                  (cons 'renderer-fn (compose xaccTransGetNum xaccSplitGetParent))))
 
         (list 't-number
               (cons 'sortkey (list SPLIT-TRANS TRANS-NUM))
               (cons 'split-sortvalue (compose xaccTransGetNum xaccSplitGetParent))
               (cons 'text (G_ "Transaction Number"))
-              (cons 'renderer-fn #f))
+              (cons 'renderer-fn (compose xaccTransGetNum xaccSplitGetParent)))
 
         (list 'memo
               (cons 'sortkey (list SPLIT-MEMO))
@@ -922,6 +922,7 @@ be excluded from periodic reporting.")
       ;; other account name option appears here
       (list (N_ "Use Full Other Account Name")  "i"  (G_ "Display the full account name?") #f)
       (list (N_ "Other Account Code")           "j"  (G_ "Display the other account code?") #f)
+      ;; Translators: The number of units of any kind of investment (shares, fonds, bonds, …)
       (list (N_ "Shares")                       "k"  (G_ "Display the number of shares?") #f)
       (list (N_ "Link")                         "l5" (G_ "Display the transaction linked document") #f)
       (list (N_ "Price")                        "l"  (G_ "Display the shares price?") #f)
@@ -1748,8 +1749,10 @@ be excluded from periodic reporting.")
           (with-output-to-string
             (lambda ()
               (when show-account-code?
-                (display (xaccAccountGetCode account))
-                (display " "))
+                (let ((code (xaccAccountGetCode account)))
+                  (unless (string-null? code)
+                    (display code)
+                    (display " "))))
               (when show-account-name?
                 (display
                  (if show-account-full-name?
@@ -1767,17 +1770,10 @@ be excluded from periodic reporting.")
              (name (account-namestring account
                                        (report-uses? 'sort-account-code)
                                        #t
-                                       (report-uses? 'sort-account-full-name)))
-             (description (if (and (report-uses? 'sort-account-description)
-                                   (not (string-null?
-                                         (xaccAccountGetDescription account))))
-                              (string-append ": " (xaccAccountGetDescription account))
-                              "")))
-        (if (and anchor? (report-uses? 'links)
-                 (pair? account)) ;html anchor for 2-split transactions only
-            (gnc:make-html-text
-             (gnc:html-markup-anchor (gnc:account-anchor-text account) name)
-             description)
+                                       (report-uses? 'sort-account-full-name))))
+        (if (and (report-uses? 'sort-account-description)
+                 (not (string-null? (xaccAccountGetDescription account))))
+            (string-append name ": " (xaccAccountGetDescription account))
             name)))
 
     ;; generic renderer. retrieve renderer-fn which should return a str
@@ -1801,6 +1797,15 @@ be excluded from periodic reporting.")
 
     (define (render-grand-total)
       (G_ "Grand Total"))
+
+    (define primary-subtotal-collectors
+      (map (lambda (x) (gnc:make-commodity-collector)) calculated-cells))
+
+    (define secondary-subtotal-collectors
+      (map (lambda (x) (gnc:make-commodity-collector)) calculated-cells))
+
+    (define total-collectors
+      (map (lambda (x) (gnc:make-commodity-collector)) calculated-cells))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; add-split-row
@@ -1841,25 +1846,27 @@ be excluded from periodic reporting.")
                                cell-content)))))
                  cell-calculators))))
 
-        (map (lambda (cell)
-               (and (assq-ref cell 'subtotal?)
-                    ((assq-ref cell 'calc-fn) split transaction-row?)))
-             cell-calculators)))
+        (when transaction-row?
+          (for-each
+           (lambda (prime-collector sec-collector tot-collector cell)
+             (when (assq-ref cell 'subtotal?)
+               (let ((value ((assq-ref cell 'calc-fn) split transaction-row?)))
+                 (when value
+                   (let ((comm (gnc:gnc-monetary-commodity value))
+                         (amt (gnc:gnc-monetary-amount value)))
+                     (prime-collector 'add comm amt)
+                     (sec-collector 'add comm amt)
+                     (tot-collector 'add comm amt))))))
+           primary-subtotal-collectors
+           secondary-subtotal-collectors
+           total-collectors
+           cell-calculators))))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
     ;; do-rows-with-subtotals
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-    (define primary-subtotal-collectors
-      (map (lambda (x) (gnc:make-commodity-collector)) calculated-cells))
-
-    (define secondary-subtotal-collectors
-      (map (lambda (x) (gnc:make-commodity-collector)) calculated-cells))
-
-    (define total-collectors
-      (map (lambda (x) (gnc:make-commodity-collector)) calculated-cells))
 
     (define grid (make-grid))
     (define primary-subtotal-comparator (report-uses? 'primary-key/split-sortvalue))
@@ -1901,14 +1908,13 @@ be excluded from periodic reporting.")
 
           (let* ((current (car splits))
                  (rest (cdr splits))
-                 (next (and (pair? rest) (car rest)))
-                 (split-values (add-split-row
-                                current
-                                calculated-cells
-                                (if (or odd-row? (report-uses? 'multiline))
-                                    def:normal-row-style
-                                    def:alternate-row-style)
-                                #t)))
+                 (next (and (pair? rest) (car rest))))
+
+            (add-split-row current calculated-cells
+                           (if (or odd-row? (report-uses? 'multiline))
+                               def:normal-row-style
+                               def:alternate-row-style)
+                           #t)
 
             (when (report-uses? 'multiline)
               (for-each
@@ -1917,19 +1923,6 @@ be excluded from periodic reporting.")
                                 def:alternate-row-style #f))
                (delete current (xaccTransGetSplitList
                                 (xaccSplitGetParent current)))))
-
-            (for-each
-             (lambda (prime-collector sec-collector tot-collector value)
-               (when (gnc:gnc-monetary? value)
-                 (let ((comm (gnc:gnc-monetary-commodity value))
-                       (val (gnc:gnc-monetary-amount value)))
-                 (prime-collector 'add comm val)
-                 (sec-collector 'add comm val)
-                 (tot-collector 'add comm val))))
-             primary-subtotal-collectors
-             secondary-subtotal-collectors
-             total-collectors
-             split-values)
 
             (cond
              ((and primary-subtotal-comparator

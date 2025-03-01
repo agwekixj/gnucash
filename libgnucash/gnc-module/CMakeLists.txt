@@ -27,6 +27,10 @@ target_include_directories (gnc-module
             ${CMAKE_BINARY_DIR}/common # for config.h
 )
 
+if (COVERAGE)
+  add_coverage_target(gnc-module)
+endif()
+
 install(TARGETS gnc-module
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -34,6 +38,5 @@ install(TARGETS gnc-module
 
 install(FILES ${gnc_module_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/gnucash)
 
-set_local_dist(gnc_module_DIST_local CMakeLists.txt ${gnc_module_SOURCES} ${gnc_module_HEADERS}
-        README)
+set_local_dist(gnc_module_DIST_local CMakeLists.txt ${gnc_module_SOURCES} ${gnc_module_HEADERS})
 set(gnc_module_DIST ${gnc_module_DIST_local} ${test_gnc_module_DIST} ${example_DIST} PARENT_SCOPE)

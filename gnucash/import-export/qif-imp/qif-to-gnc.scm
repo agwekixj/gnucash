@@ -430,7 +430,11 @@
             ;; Update the progress.
             (update-progress)
 
-            (if (not (qif-xtn:mark xtn))
+            ;; xaccTransCommitEdit will delete the transaction if
+            ;; there aren't at least 2 splits and that will cause a
+            ;; UAF in xaccTransRecordPrice. See https://bugs.gnucash.org/show_bug.cgi?id=799420
+            (let ((splits (qif-xtn:splits xtn)))
+              (if (not (or (qif-xtn:mark xtn) (null? splits)))
                 ;; Convert into a GnuCash transaction.
                 (let ((gnc-xtn (xaccMallocTransaction
                                 (gnc-get-current-book))))
@@ -451,7 +455,8 @@
 
                   ;; rebalance and commit everything
                   (xaccTransCommitEdit gnc-xtn)
-                  (xaccTransRecordPrice gnc-xtn PRICE-SOURCE-SPLIT-IMPORT))))
+                  (format #t "transaction splits ~s~%" (qif-xtn:splits xtn))
+                  (xaccTransRecordPrice gnc-xtn PRICE-SOURCE-SPLIT-IMPORT)))))
           (qif-file:xtns qif-file)))
        sorted-qif-files-list)
 
@@ -735,6 +740,13 @@
                (gnc-far-split (xaccMallocSplit (gnc-get-current-book))))
 
           (if (not num-shares) (set! num-shares (gnc-numeric-zero)))
+
+          (unless qif-action
+            (qif-import:log progress-dialog "qif-import:qif-xtn-to-gnc-xtn"
+                            (format #f (G_ "Missing QIF investment action for transaction dated ~a.")
+                                    (qof-print-date (qif-date-to-time64 qif-date))))
+            (throw 'missing-action "qif-import:qif-xtn-to-gnc-xtn" "Missing investment action."
+                   #f #f))
 
           ;; Determine the extended price of all shares without commission.
           (if xtn-amt

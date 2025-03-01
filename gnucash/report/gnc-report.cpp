@@ -200,11 +200,12 @@ gnc_reports_flush_global(void)
         g_hash_table_foreach_remove(reports, yes_remove, NULL);
 }
 
-GHashTable *
-gnc_reports_get_global(void)
+void
+gnc_reports_foreach (GHFunc func, gpointer user_data)
 {
     gnc_report_init_table();
-    return reports;
+    if (reports)
+        g_hash_table_foreach (reports, func, user_data);
 }
 
 gboolean
@@ -229,9 +230,18 @@ gnc_run_report_with_error_handling (gint report_id, gchar ** data, gchar **errms
     }
     else
     {
-        *errmsg = gnc_scm_to_utf8_string (captured_error);
-        *data = NULL;
-        PWARN ("Error in report: %s", *errmsg);
+        constexpr const char* with_err = "Report %s failed to generate html: %s";
+        constexpr const char* without_err = "Report %s Failed to generate html but didn't raise a Scheme exception.";
+        auto scm_err = scm_is_string (captured_error) ? gnc_scm_to_utf8_string (captured_error) :
+            g_strdup ("");
+
+        if (scm_err && *scm_err)
+            *errmsg = g_strdup_printf (with_err, gnc_report_name (report), scm_err);
+        else
+            *errmsg = g_strdup_printf (without_err, gnc_report_name (report));
+
+        *data = nullptr;
+        g_free (scm_err);
         return FALSE;
     }
 }

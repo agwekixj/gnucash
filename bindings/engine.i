@@ -41,6 +41,7 @@
 #include "gnc-kvp-guile.h"
 #include "glib-guile.h"
 
+#include "Account.hpp"
 #include "gncAddress.h"
 #include "gncBillTerm.h"
 #include "gncCustomer.h"
@@ -53,9 +54,20 @@
 #include "gncTaxTable.h"
 #include "gncVendor.h"
 
+#include <numeric>
+#include <unordered_set>
 %}
 #if defined(SWIGGUILE) //Always C++
 %{
+
+using SplitsVec = std::vector<Split*>;
+using AccountVec = std::vector<Account*>;
+
+SplitsVec gnc_get_match_commodity_splits (AccountVec accounts, bool use_end_date,
+                                          time64 end_date, gnc_commodity *comm, bool sort);
+
+AccountVec gnc_accounts_and_all_descendants (AccountVec accounts);
+
 extern "C"
 {
 SCM scm_init_sw_engine_module (void);
@@ -73,6 +85,9 @@ GLIST_HELPER_INOUT(AccountList, SWIGTYPE_p_Account);
 GLIST_HELPER_INOUT(PriceList, SWIGTYPE_p_GNCPrice);
 // TODO: free PriceList?
 GLIST_HELPER_INOUT(CommodityList, SWIGTYPE_p_gnc_commodity);
+VECTOR_HELPER_INOUT(SplitsVec, SWIGTYPE_p_Split, Split);
+VECTORREF_HELPER_INOUT(SplitsVec&, SWIGTYPE_p_Split, Split);
+VECTOR_HELPER_INOUT(AccountVec, SWIGTYPE_p_Account, Account);
 
 %typemap(newfree) char * "g_free($1);"
 
@@ -83,6 +98,7 @@ engine-common.i */
 %newobject gnc_account_get_full_name;
 %newobject xaccTransGetAPARAcctSplitList;
 %newobject xaccTransGetPaymentAcctSplitList;
+%newobject xaccAccountGetSplitList;
 
 %include "engine-common.i"
 
@@ -114,6 +130,52 @@ static const GncGUID * gncPriceGetGUID(GNCPrice *x)
 { return qof_instance_get_guid(QOF_INSTANCE(x)); }
 static const GncGUID * gncBudgetGetGUID(GncBudget *x)
 { return qof_instance_get_guid(QOF_INSTANCE(x)); }
+
+SplitsVec gnc_get_match_commodity_splits (AccountVec accounts, bool use_end_date,
+                                          time64 end_date, gnc_commodity *comm, bool sort)
+{
+    SplitsVec rv;
+
+    auto maybe_accumulate = [&rv, comm](auto s)
+    {
+        auto txn_comm{xaccTransGetCurrency (xaccSplitGetParent (s))};
+        auto acc_comm{xaccAccountGetCommodity (xaccSplitGetAccount (s))};
+        if ((xaccSplitGetReconcile (s) != VREC) &&
+            (txn_comm != acc_comm) &&
+            (!comm || comm == txn_comm || comm == acc_comm))
+            rv.push_back (s);
+    };
+
+    std::function<void(Account*)> scan_account;
+    if (use_end_date)
+        scan_account = [end_date, maybe_accumulate](auto acc)
+            { gnc_account_foreach_split_until_date (acc, end_date, maybe_accumulate); };
+    else
+        scan_account = [maybe_accumulate](auto acc)
+            { gnc_account_foreach_split (acc, maybe_accumulate, false); };
+
+    std::for_each (accounts.begin(), accounts.end(), scan_account);
+    if (sort)
+        std::sort (rv.begin(), rv.end(), [](auto a, auto b){ return xaccSplitOrder (a, b) < 0; });
+    return rv;
+}
+
+using AccountSet = std::unordered_set<Account*>;
+static void maybe_add_descendants (Account* acc, AccountSet* accset)
+{
+    if (accset->insert (acc).second)
+        gnc_account_foreach_child (acc, (AccountCb)maybe_add_descendants, accset);
+};
+
+AccountVec
+gnc_accounts_and_all_descendants (AccountVec accounts)
+{
+    AccountSet accset;
+    for (auto a : accounts)
+        maybe_add_descendants (a, &accset);
+    return AccountVec (accset.begin(), accset.end());
+}
+
 %}
 
 /* NB: The object ownership annotations should already cover all the
@@ -130,7 +192,6 @@ functions. */
 %newobject gnc_pricedb_lookup_latest_before_any_currency_t64;
 %newobject gnc_pricedb_get_prices;
 %newobject gnc_pricedb_lookup_at_time;
-%newobject gnc_pricedb_lookup_at_time64;
 %newobject gnc_pricedb_lookup_day;
 %newobject gnc_pricedb_lookup_day_t64;
 
@@ -260,6 +321,8 @@ Account * gnc_book_get_template_root(QofBook *book);
 %typemap(out) KvpValue * " $result = gnc_kvp_value_ptr_to_scm($1); "
 %typemap(in) GSList *key_path " $1 = gnc_scm_to_gslist_string($input);"
 %typemap(freearg) GSList *key_path "g_slist_free_full ($1, g_free);"
+
+const SplitsVec& xaccAccountGetSplits (const Account*);
 
 QofBook* qof_book_new (void);
 void qof_book_options_delete (QofBook *book, GSList *key_path);

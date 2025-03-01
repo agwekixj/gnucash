@@ -312,6 +312,11 @@ typedef enum
     void xaccAccountSetSortReversed (Account *account, gboolean sortreversed);
     /** Set the account's notes */
     void xaccAccountSetNotes (Account *account, const char *notes);
+
+    /** Set the account's associated account e.g. stock account -> dividend account */
+    void xaccAccountSetAssociatedAccount (Account *acc, const char *tag,
+                                          const Account *assoc_acct);
+
     /** Set the last num field of an Account */
     void xaccAccountSetLastNum (Account *account, const char *num);
     /** Set the account's lot order policy */
@@ -416,6 +421,9 @@ typedef enum
     gboolean xaccAccountGetSortReversed (const Account *account);
     /** Get the account's notes */
     const char * xaccAccountGetNotes (const Account *account);
+
+    /** Get the account's associated account e.g. stock account -> dividend account */
+    Account* xaccAccountGetAssociatedAccount (const Account *acc, const char *tag);
     /** Get the last num field of an Account */
     const char * xaccAccountGetLastNum (const Account *account);
     /** Get the account's lot order policy */
@@ -1052,6 +1060,8 @@ typedef enum
      */
     SplitList* xaccAccountGetSplitList (const Account *account);
 
+    size_t xaccAccountGetSplitsSize (const Account *account);
+
     /** The xaccAccountMoveAllSplits() routine reassigns each of the splits
      *  in accfrom to accto. */
     void xaccAccountMoveAllSplits (Account *accfrom, Account *accto);
@@ -1396,9 +1406,9 @@ typedef enum
     const char * xaccAccountGetTaxUSPayerNameSource (const Account *account);
     /** DOCUMENT ME! */
     void xaccAccountSetTaxUSPayerNameSource (Account *account, const char *source);
-    /** DOCUMENT ME! */
+    /** Returns copy_number stored in KVP; if KVP doesn't exist or copy_number is zero, returns 1 */
     gint64 xaccAccountGetTaxUSCopyNumber (const Account *account);
-    /** DOCUMENT ME! */
+    /** Saves copy_number in KVP if it is greater than 1; if copy_number is zero, deletes KVP */
     void xaccAccountSetTaxUSCopyNumber (Account *account, gint64 copy_number);
     /** @} */
 
@@ -1482,12 +1492,6 @@ typedef enum
      *  begin.
      */
     void gnc_account_tree_begin_staged_transaction_traversals(Account *acc);
-
-    /** xaccSplitsBeginStagedTransactionTraversals() resets the traversal
-     *    marker for each transaction which is a parent of one of the
-     *    splits in the list.
-     */
-    void xaccSplitsBeginStagedTransactionTraversals(SplitList *splits);
 
     /** xaccAccountBeginStagedTransactionTraversals() resets the traversal
      *    marker for each transaction which is a parent of one of the
@@ -1682,8 +1686,6 @@ typedef enum
      *  commodity, not the account. */
     const char * dxaccAccountGetQuoteTZ (const Account *account);
     /** @} */
-
-    GList * gnc_accounts_and_all_descendants (GList *accounts);
 
     /** @name Account parameter names
      @{

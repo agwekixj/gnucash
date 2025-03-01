@@ -22,6 +22,13 @@
 /** @addtogroup Business
     @{ */
 /** @addtogroup TaxTable
+    Define an object to track tax properties for invoices.
+
+    @note A tax table added to an invoice is immutable, that is it
+    can't change any more. To achieve that a tax table is copied when
+    added to an invoice. This uses some internal fields to track this which
+    are explained in @ref ImmutableTaxTableBillTerm.
+
     @{ */
 /** @file gncTaxTable.h
     @brief Tax Table programming interface
@@ -38,7 +45,7 @@ extern "C" {
 /** @struct GncTaxTable
 
 modtime is the internal date of the last modtime\n
-See src/doc/business.txt for an explanation of the following\n
+See libgnucash/engine/TaxTableBillTermImmutability.txt for an explanation of the following\n
 Code that handles refcount, parent, child, invisible and children
 is *identical* to that in ::GncBillTerm
 

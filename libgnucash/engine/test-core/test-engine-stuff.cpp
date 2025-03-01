@@ -47,7 +47,6 @@
 #include <fcntl.h>
 #include <glib.h>
 #include <stdio.h>
-#include <stdint.h>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,11 +57,11 @@
 #include <qof.h>
 
 #include "Account.h"
-#include "AccountP.h"
+#include "AccountP.hpp"
 #include "gnc-engine.h"
 #include "gnc-session.h"
 #include "Transaction.h"
-#include "TransactionP.h"
+#include "TransactionP.hpp"
 #include "Recurrence.h"
 #include "SchedXaction.h"
 #include "SX-book.h"
@@ -1074,7 +1073,6 @@ make_random_changes_to_level (QofBook *book, Account *parent)
     account = static_cast<Account*>(get_random_list_element (accounts));
 
     splits = xaccAccountGetSplitList (account);
-    splits = g_list_copy (splits);
 
     for (node = splits; node; node = node->next)
     {

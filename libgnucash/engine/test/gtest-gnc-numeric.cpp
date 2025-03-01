@@ -21,6 +21,7 @@
 \********************************************************************/
 
 #include <gtest/gtest.h>
+#include <cstdint>
 #include "../gnc-numeric.hpp"
 #include "../gnc-rational.hpp"
 
@@ -206,6 +207,9 @@ TEST(gncnumeric_constructors, test_string_constructor)
     EXPECT_THROW(GncNumeric overflow("12345678987654321.123456"),
                  std::overflow_error);
     EXPECT_NO_THROW(GncNumeric overflow("12345678987654321.123456", true));
+    EXPECT_NO_THROW(GncNumeric limit64a("-9223372036854775808/9223372036854775807"));
+    EXPECT_THROW(GncNumeric limit64b("-9223372036854775809/9223372036854775807"), std::out_of_range);
+    EXPECT_THROW(GncNumeric limit64c("-9223372036854775808/9223372036854775808"), std::out_of_range);
     GncNumeric overflow("12345678987654321.123456", true);
     EXPECT_EQ(6028163568190586486, overflow.num());
     EXPECT_EQ(488, overflow.denom());
@@ -425,6 +429,28 @@ TEST(gncnumeric_functions, test_cmp)
     EXPECT_EQ(1, b.cmp(a));
     EXPECT_EQ(-1, b.cmp(INT64_C(88888)));
     EXPECT_EQ(1, a.cmp(INT64_C(12500)));
+}
+
+TEST(gncnumeric_functions, test_operators)
+{
+    GncNumeric a(123456789, 9876), b(567894321, 6543);
+    auto c = a;
+    EXPECT_TRUE (b > a);
+    EXPECT_TRUE (a < b);
+    EXPECT_TRUE (b >= a);
+    EXPECT_TRUE (a <= b);
+    EXPECT_TRUE (a == c);
+    EXPECT_TRUE (b != c);
+
+    auto zero = INT64_C(0);
+    EXPECT_TRUE (b > zero);
+    EXPECT_TRUE (zero < a);
+    EXPECT_TRUE (b >= zero);
+    EXPECT_TRUE (zero <= b);
+    EXPECT_TRUE (a != zero);
+    EXPECT_TRUE (zero != a);
+    EXPECT_FALSE (a == zero);
+    EXPECT_FALSE (zero == a);
 }
 
 TEST(gncnumeric_functions, test_invert)

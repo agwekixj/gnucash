@@ -33,7 +33,7 @@ set (gnome_utils_SOURCES
   dialog-account.c
   dialog-doclink-utils.c
   dialog-book-close.c
-  dialog-commodity.c
+  dialog-commodity.cpp
   dialog-dup-trans.c
   dialog-file-access.c
   dialog-object-references.c
@@ -55,7 +55,7 @@ set (gnome_utils_SOURCES
   gnc-cell-view.c
   gnc-commodity-edit.c
   gnc-component-manager.c
-  gnc-currency-edit.c
+  gnc-currency-edit.cpp
   gnc-date-edit.c
   gnc-date-format.c
   gnc-dense-cal.c
@@ -222,6 +222,10 @@ endif()
 if (MAC_INTEGRATION)
   target_compile_options(gnc-gnome-utils PRIVATE ${OSX_EXTRA_COMPILE_FLAGS})
   target_link_libraries(gnc-gnome-utils ${OSX_EXTRA_LIBRARIES})
+endif()
+
+if (COVERAGE)
+  add_coverage_target(gnc-gnome-utils)
 endif()
 
 target_include_directories(gnc-gnome-utils

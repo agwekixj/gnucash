@@ -225,11 +225,11 @@
     (cons 'N387 #(none "F2106" "Emp. expense reimb." 1 #t "" ((2009 "7") (1990 "7,A"))))
     (cons 'N388 #(none "F2106" "Emp. meal exp reimb" 1 #t "" ((2009 "7") (1990 "7,B"))))
 
-    (cons 'N392 #(not-impl "HomeWks" "Home Sale Worksheets, Pub 523" 1 #t ""))
-    (cons 'N525 #(not-impl "HomeWks" "Spouse" 0 #t "" ((2000 "")) 2000))
-    (cons 'N398 #(not-impl "HomeWks" "Date old home sold" 2 #t "" ((2002 ""))))
-    (cons 'N399 #(not-impl "HomeWks" "Date moved into new home" 2 #t "" ((2000 "11a")) 2000))
-    (cons 'N393 #(none "HomeWks" "Selling price of old home" 1 #t "" ((2002 "1"))))
+    (cons 'N392 #(not-impl "Pub523-Wksht2" "Home Sale Worksheets, Pub 523" 1 #t ""))
+    (cons 'N525 #(not-impl "Pub523-Wksht2" "Spouse" 0 #t "" ((2000 "")) 2000))
+    (cons 'N398 #(not-impl "Pub523-Wksht2" "Date old home sold" 2 #t "" ((2002 ""))))
+    (cons 'N399 #(not-impl "Pub523-Wksht2" "Date moved into new home" 2 #t "" ((2000 "11a")) 2000))
+    (cons 'N393 #(none "Pub523-Wksht2" "Selling price of old home" 1 #t "" ((2002 "1"))))
 
     (cons 'N503 #(not-impl "F4137" "Form 4137" 1 #t ""))
     (cons 'N504 #(not-impl "F4137" "Spouse" 0 #t "" ((1990 ""))))
@@ -673,7 +673,7 @@
 
     (cons 'N565 #(not-impl "Sched H" "Schedule H" 1 #t ""))
     (cons 'N566 #(not-impl "Sched H" "Spouse" 0 #t "" ((1995 "")) 1995))
-    (cons 'N567 #(parent "Sched H" "Cash wages paid" 1 #t "" ((2020 "1a") (1995 "1"))))
+    (cons 'N567 #(parent "Sched H" "Cash wages paid" 1 #t "" ((2024 "1") (2020 "1a") (1995 "1"))))
     (cons 'N568 #(parent "Sched H" "Federal tax withheld" 1 #t "" ((2013 "7") (1995 "5"))))
 
     (cons 'N380 #(not-impl "F2106" "Form 2106" 1 #t ""))
@@ -687,10 +687,10 @@
     (cons 'N391 #(none "F2106" "Employee home office expenses" 1 #t "" ((1990 "4"))))
     (cons 'N386 #(none "F2106" "Meal/entertainment expenses" 1 #t "" ((1990 "5"))))
 
-    (cons 'N392 #(not-impl "HomeWks" "Home Sale Worksheets, Pub 523" 1 #t ""))
-    (cons 'N394 #(none "HomeWks" "Expense of sale" 1 #t "" ((2002 "2"))))
-    (cons 'N395 #(none "HomeWks" "Basis of home sold" 1 #t "" ((2002 "4"))))
-    (cons 'N396 #(none "HomeWks" "Fixing-up expenses" 1 #t "" ((2000 "8")) 2000))
+    (cons 'N392 #(not-impl "Pub523-Wksht2" "Home Sale Worksheets, Pub 523" 1 #t ""))
+    (cons 'N394 #(none "Pub523-Wksht2" "Expense of sale" 1 #t "" ((2002 "2"))))
+    (cons 'N395 #(none "Pub523-Wksht2" "Basis of home sold" 1 #t "" ((2002 "4"))))
+    (cons 'N396 #(none "Pub523-Wksht2" "Fixing-up expenses" 1 #t "" ((2000 "8")) 2000))
 
     (cons 'N400 #(not-impl "F2441" "Form 2441" 1 #f ""))
     (cons 'N401 #(current "F2441" "Child care - day care" 1 #f "Childcare" ((1990 "1"))))
@@ -861,8 +861,8 @@
     (cons 'N1684 #(none "F1065" "Depletion" 1 #f "" ((1990 "17"))))
     (cons 'N1686 #(none "F1065" "Retirement plans/etc." 1 #f "" ((1991 "18") (1990 "18a"))))
     (cons 'N1688 #(none "F1065" "Employee benefit programs" 1 #f "" ((1991 "19") (1990 "18b"))))
-    (cons 'N1736 #(none "F1065" "Meals and entertainment" 1 #f "" ((1991 "20") (1990 "19"))))
-    (cons 'N1740 #(none "F1065" "Other" 1 #f "" ((1991 "20") (1990 "19"))))
+    (cons 'N1736 #(none "F1065" "Meals and entertainment" 1 #f "" ((2023 "21") (1991 "20") (1990 "19"))))
+    (cons 'N1740 #(none "F1065" "Other" 1 #f "" ((2023 "21") (1991 "20") (1990 "19"))))
 
     (cons 'N1634 #(none "F1065" "Purchases" 1 #f "" ((2011 "Form 1125-A, 2") (1990 "A2"))))
     (cons 'N1636 #(none "F1065" "Cost of labor" 1 #f "" ((2011 "Form 1125-A, 3") (1990 "A3"))))
@@ -872,9 +872,9 @@
 
     (cons 'N1805 #(none "F1065" "Expenses-rental" 1 #f "" ((1990 "K3b"))))
     (cons 'N1829 #(none "F1065" "Charitable contributions" 1 #f "" ((2004 "K13a") (1990 "K8"))))
-    (cons 'N1848 #(none "F1065" "Int. exp. on investment debts" 1 #f "" ((2005 "K13b") (2004 "K13c") (1997 "K14a") (1990 "K12a"))))
-    (cons 'N1856 #(none "F1065" "Section 59(e) expenses" 1 #f "" ((2005 "K13c(2)") (2004 "K13d(2)") (1995 "K18b") (1990 "K18a"))))
-    (cons 'N1845 #(none "F1065" "Other deductions" 1 #f "" ((2005 "K13d") (2004 "K13e") (1990 "K11"))))
+    (cons 'N1848 #(none "F1065" "Int. exp. on investment debts" 1 #f "" ((2005 "K13c") (2005 "K13b") (2004 "K13c") (1997 "K14a") (1990 "K12a"))))
+    (cons 'N1856 #(none "F1065" "Section 59(e) expenses" 1 #f "" ((2004 "K13d(2)") (1995 "K18b") (1990 "K18a"))))
+    (cons 'N1845 #(none "F1065" "Other deductions" 1 #f "" ((2023 "K13e") (2005 "K13d") (2004 "K13e") (1990 "K11"))))
     (cons 'N1853 #(none "F1065" "Total foreign taxes" 1 #f "" ((2021 "K21") (2018 "K16p") (2004 "K16l") (2001 "K17g") (2000 "K17f") (1990 "K17e"))))
     (cons 'N1857 #(none "F1065" "Tax-exempt interest income" 1 #f "" ((2004 "K18a") (1990 "K19"))))
     (cons 'N1859 #(none "F1065" "Other tax-exempt income" 1 #f "" ((2004 "K18b") (1992 "K20") (1990 "K19"))))
@@ -1015,10 +1015,10 @@
     (cons 'N1153 #(none "F1120" "Meals and entertainment" 1 #f "" ((1990 "26"))))
     (cons 'N1157 #(none "F1120" "Other deductions" 1 #f "" ((1990 "26"))))
 
-    (cons 'N1161 #(none "F1120" "Estimated Qtrly Payment #1" 1 #f "" ((2018 "J-III, 14") (2011 "J-II, 13") (1990 "32b"))))
-    (cons 'N1163 #(none "F1120" "Estimated Qtrly Payment #2" 1 #f "" ((2018 "J-III, 14") (2011 "J-II, 13") (1990 "32b"))))
-    (cons 'N1165 #(none "F1120" "Estimated Qtrly Payment #3" 1 #f "" ((2018 "J-III, 14") (2011 "J-II, 13") (1990 "32b"))))
-    (cons 'N1167 #(none "F1120" "Estimated Qtrly Payment #4" 1 #f "" ((2018 "J-III, 14") (2011 "J-II, 13") (1990 "32b"))))
+    (cons 'N1161 #(none "F1120" "Estimated Qtrly Payment #1" 1 #f "" ((2024"J, 14") (2023 "J-II, 14") (2018 "J-III, 14") (2011 "J-II, 13") (1990 "32b"))))
+    (cons 'N1163 #(none "F1120" "Estimated Qtrly Payment #2" 1 #f "" ((2024"J, 14") (2023 "J-II, 14") (2018 "J-III, 14") (2011 "J-II, 13") (1990 "32b"))))
+    (cons 'N1165 #(none "F1120" "Estimated Qtrly Payment #3" 1 #f "" ((2024"J, 14") (2023 "J-II, 14") (2018 "J-III, 14") (2011 "J-II, 13") (1990 "32b"))))
+    (cons 'N1167 #(none "F1120" "Estimated Qtrly Payment #4" 1 #f "" ((2024"J, 14") (2023 "J-II, 14") (2018 "J-III, 14") (2011 "J-II, 13") (1990 "32b"))))
 
     (cons 'N1234 #(none "F1120" "Depreciation per books" 1 #f "" ((1990 "M-1,5a&8a"))))
     (cons 'N1235 #(none "F1120" "Expenses on books not on return" 1 #f "" ((1990 "M-1,5"))))
@@ -1055,8 +1055,8 @@
     (cons 'N1321 #(none "F1120S" "Advertising" 1 #f "" ((1990 "16"))))
     (cons 'N1323 #(none "F1120S" "Pension/profit-sharing/etc." 1 #f "" ((1990 "17"))))
     (cons 'N1325 #(none "F1120S" "Employee benefit programs" 1 #f "" ((1990 "18"))))
-    (cons 'N1369 #(none "F1120S" "Meals and entertainment" 1 #f "" ((1990 "19"))))
-    (cons 'N1373 #(none "F1120S" "Other deductions" 1 #f "" ((1990 "19"))))
+    (cons 'N1369 #(none "F1120S" "Meals and entertainment" 1 #f "" ((2023 "20") (1990 "19"))))
+    (cons 'N1373 #(none "F1120S" "Other deductions" 1 #f "" ((2023 "20") (1990 "19"))))
 
     (cons 'N1275 #(none "F1120S" "Purchases" 1 #f "" ((2011 "Form 1125-A, 2") (1990 "A2"))))
     (cons 'N1277 #(none "F1120S" "Cost of labor" 1 #f "" ((2011 "Form 1125-A, 3") (1990 "A3"))))
@@ -1165,8 +1165,8 @@
     (cons 'N440 #(none "F8606" "IRA basis at beg of year" 1 #t "" ((1993 "2") (1988 "3"))))
     (cons 'N438 #(none "F8606" "IRAs value at end of year" 1 #t "" ((1993 "6") (1989 "1") (1988 "11") (1987 "8"))))
 
-    (cons 'N392 #(not-impl "HomeWks" "Home Sale Worksheets" 1 #t ""))
-    (cons 'N397 #(none "HomeWks" "Cost of new home" 1 #t "" ((2000 "11b")) 2000))
+    (cons 'N392 #(not-impl "Pub523-Wksht2" "Home Sale Worksheets" 1 #t ""))
+    (cons 'N397 #(none "Pub523-Wksht2" "Cost of new home" 1 #t "" ((2000 "11b")) 2000))
    )
   )
   (cons 'F1065

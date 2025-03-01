@@ -10,8 +10,6 @@
 (use-modules (tests srfi64-extras))
 (use-modules (sxml simple))
 (use-modules (sxml xpath))
-(use-modules (system vm coverage))
-(use-modules (system vm vm))
 
 ;; Guide to the test-transaction.scm
 
@@ -28,16 +26,6 @@
 ;; (options->sxml) which in turn generates the transaction report, and
 ;; dumps the output at /tmp/test-trep-*.html for review.
 
-;; For coverage analysis, please amend (run-test) (if #f ...) to (if
-;; #t ...)  and this will run (coverage-test) instead, which will
-;; generate the coverage report in /tmp/lcov.info -- the latter can be
-;; converted to an html report using genhtml from
-;; http://ltp.sourceforge.net/coverage/lcov.php
-
-;; Please note the with-code-coverage has changed guile-2.0 to 2.2
-;; which does not require specifying the VM; I have no experience
-;; running in guile 2.2 and cannot confirm syntax.
-
 ;; copied from transaction.scm
 (define trep-uuid "2fe3b9833af044abb929a88d5a59620f")
 (define reconcile-uuid "e45218c6d76f11e7b5ef0800277ef320")
@@ -46,23 +34,6 @@
 (setlocale LC_ALL "C")
 
 (define (run-test)
-  (if #f
-      (coverage-test)
-      (run-test-proper)))
-
-(define (coverage-test)
-  (let* ((currfile (dirname (current-filename)))
-         (path (string-take currfile (string-rindex currfile #\/))))
-    (add-to-load-path path))
-  (call-with-values
-      (lambda()
-        (with-code-coverage run-test-proper))
-    (lambda (data result)
-      (let ((port (open-output-file "/tmp/lcov.info")))
-        (coverage-data->lcov data port)
-        (close port)))))
-
-(define (run-test-proper)
   (test-runner-factory gnc:test-runner)
   (test-begin "transaction.scm")
   (null-test)
@@ -170,6 +141,10 @@
         (set-option! options "Display" "Amount" 'single)
         options))
 
+    ;; to test Sorting/Show Account Description
+    (xaccAccountSetDescription income "Salaries etc")
+    (xaccAccountSetCode expense "EXP-001")
+
     ;; This will make all accounts use default currency (I think depends on locale)
     (for-each
      (lambda(pair)
@@ -257,7 +232,7 @@
     ;;                     (xaccSplitGetAmount s)
     ;;                     (xaccAccountGetName (xaccSplitGetAccount (xaccSplitGetOtherSplit s)))
     ;;                     ))
-    ;;           (xaccAccountGetSplitList bank))
+    ;;           (xaccAccountGetSplits bank))
 
     ;; Finally we can begin testing
     (test-begin "general options")
@@ -817,13 +792,24 @@
       (set-option! options "Sorting" "Secondary Key" 'date)
       (set-option! options "Sorting" "Secondary Subtotal for Date Key" 'quarterly)
       (set-option! options "Sorting" "Show Informal Debit/Credit Headers" #t)
-      (set-option! options "Sorting" "Show Account Description" #t)
+      (set-option! options "Sorting" "Show Account Description" #f)
+      (set-option! options "Sorting" "Show Account Code" #f)
       (let* ((sxml (options->sxml options "sorting=date, friendly headers")))
         (test-equal "expense acc friendly headers"
           '("Expenses" "Expense" "Rebate")
           (get-row-col sxml 69 #f))
         (test-equal "income acc friendly headers"
           '("Income" "Charge" "Income")
+          (get-row-col sxml 91 #f)))
+
+      (set-option! options "Sorting" "Show Account Description" #t)
+      (set-option! options "Sorting" "Show Account Code" #t)
+      (let* ((sxml (options->sxml options "sorting=date, friendly headers with acct desc/code")))
+        (test-equal "expense acc friendly headers"
+          '("EXP-001 Expenses" "Expense" "Rebate")
+          (get-row-col sxml 69 #f))
+        (test-equal "income acc friendly headers"
+          '("Income: Salaries etc" "Charge" "Income")
           (get-row-col sxml 91 #f)))
 
       (set-option! options "Accounts" "Accounts" (list bank))

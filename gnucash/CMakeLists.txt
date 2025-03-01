@@ -160,6 +160,11 @@ if (MAC_INTEGRATION)
   target_link_options(gnucash-cli PRIVATE -Wl,-sectcreate,__TEXT,__info_plist,${CMAKE_SOURCE_DIR}/Info.plist)
 endif()
 
+if (COVERAGE AND LCOV_VERSION VERSION_GREATER_EQUAL "2.0")
+  add_coverage_target(gnucash)
+  add_coverage_target(gnucash-cli)
+endif()
+
 install(TARGETS gnucash gnucash-cli DESTINATION ${CMAKE_INSTALL_BINDIR})
 # No headers to install.
 
@@ -204,10 +209,9 @@ set(XDG_TEXT "
 # and gsettings schema are found.\n"
 )
 
-if (NOT(${CMAKE_INSTALL_FULL_DATADIR} STREQUAL "/usr/share") AND NOT(${CMAKE_INSTALL_FULL_DATADIR} STREQUAL "/usr/local/share"))
-  file(APPEND ${ENV_FILE_OUT} ${XDG_TEXT})
-  file(APPEND ${ENV_FILE_OUT} "XDG_DATA_DIRS={GNC_HOME}/share;{XDG_DATA_DIRS};" "${GNC_SYSTEM_XDG_DATA_DIRS}\n")
-endif()
+file(APPEND ${ENV_FILE_OUT} ${XDG_TEXT})
+file(APPEND ${ENV_FILE_OUT} "XDG_DATA_DIRS={GNC_HOME}/share;{XDG_DATA_DIRS};" "${GNC_SYSTEM_XDG_DATA_DIRS}\n")
+
 file(APPEND ${BUILD_ENV_FILE_OUT} ${XDG_TEXT})
 file(APPEND ${BUILD_ENV_FILE_OUT} "XDG_DATA_DIRS=${DATADIR_BUILD};{XDG_DATA_DIRS};" "${GNC_SYSTEM_XDG_DATA_DIRS}\n")
 

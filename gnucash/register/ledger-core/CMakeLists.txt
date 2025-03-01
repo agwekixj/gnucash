@@ -4,7 +4,7 @@ add_subdirectory(test)
 set (ledger_core_SOURCES
   gnc-ledger-display.c
   split-register.c
-  split-register-control.c
+  split-register-control.cpp
   split-register-copy-ops.c
   split-register-layout.c
   split-register-load.c
@@ -54,6 +54,10 @@ target_include_directories(gnc-ledger-core
 
 if (APPLE)
   set_target_properties (gnc-ledger-core PROPERTIES INSTALL_NAME_DIR "${CMAKE_INSTALL_FULL_LIBDIR}/gnucash")
+endif()
+
+if (COVERAGE)
+  add_coverage_target(gnc-ledger-core)
 endif()
 
 install(TARGETS gnc-ledger-core

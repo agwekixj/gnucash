@@ -9,18 +9,18 @@
 # Jaime Marquínez Ferrándiz <weblate@jregistros.fastmail.net>, 2021.
 # Guille <willelopz+weblate@gmail.com>, 2021.
 # Guille Lopez <willelopz@gmail.com>, 2021.
-# Francisco Serrador <fserrador@gmail.com>, 2021, 2022, 2023.
+# Francisco Serrador <fserrador@gmail.com>, 2021, 2022, 2023, 2025.
 # Cow <javier.fserrador@gmail.com>, 2022.
 # Pablo Fernandez <pfernandez@theansweris27.com>, 2022.
-# gallegonovato <fran-carro@hotmail.es>, 2023.
+# gallegonovato <fran-carro@hotmail.es>, 2023, 2024.
 msgid ""
 msgstr ""
-"Project-Id-Version: GnuCash 5.4\n"
-"Report-Msgid-Bugs-To: https://bugs.gnucash.org/enter_bug.cgi?"
-"product=GnuCash&component=Translations\n"
-"POT-Creation-Date: 2023-09-25 08:00+0200\n"
-"PO-Revision-Date: 2023-09-24 21:59+0000\n"
-"Last-Translator: gallegonovato <fran-carro@hotmail.es>\n"
+"Project-Id-Version: GnuCash 5.6\n"
+"Report-Msgid-Bugs-To: https://bugs.gnucash.org/"
+"enter_bug.cgi?product=GnuCash&component=Translations\n"
+"POT-Creation-Date: 2024-06-22 06:24+0200\n"
+"PO-Revision-Date: 2025-01-18 17:00+0000\n"
+"Last-Translator: Francisco Serrador <fserrador@gmail.com>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/gnucash/glossary/"
 "es/>\n"
 "Language: es\n"
@@ -28,7 +28,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 5.1-dev\n"
+"X-Generator: Weblate 5.10-dev\n"
 
 #. "English Definition (Dear translators: This file will never be visible to normal users! It should only serve as a tool for translators. E.g. matching terms from this file are displayed in Weblate's Translation pages of other GnuCash components like the program.)"
 msgid "Term"
@@ -304,7 +304,7 @@ msgstr "cerrar"
 
 #. "An article that is bought and sold. The most general term of what an account keeps track of, e.g. a currency or a stock."
 msgid "commodity"
-msgstr "mercancía, materia prima"
+msgstr "producto, mercancía, materia prima"
 
 #. "e.g. NASDAQ"
 msgid "commodity listing"
@@ -741,6 +741,10 @@ msgstr "cuadrar"
 #. "A document or certificate showing who owns shares"
 msgid "security"
 msgstr "garantía"
+
+#. "Selling borrowed units in the hope that when you buy them back later it will be at a lower price."
+msgid "Sell short"
+msgstr "Ventas a corto plazo"
 
 #. "-"
 msgid "Share Balance (register)"

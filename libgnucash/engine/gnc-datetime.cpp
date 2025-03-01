@@ -29,6 +29,11 @@
 #include <boost/date_time/local_time/local_time.hpp>
 #include <boost/locale.hpp>
 #include <boost/regex.hpp>
+#include <unicode/smpdtfmt.h>
+#include <unicode/locid.h>
+#include <unicode/udat.h>
+#include <unicode/parsepos.h>
+#include <unicode/calendar.h>
 #include <libintl.h>
 #include <locale.h>
 #include <map>
@@ -37,6 +42,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <optional>
+#include <charconv>
 #ifdef __MINGW32__
 #include <codecvt>
 #endif
@@ -68,6 +75,8 @@ static const TZ_Ptr utc_zone(new boost::local_time::posix_time_zone("UTC-0"));
 void _set_tzp(TimeZoneProvider& tz);
 void _reset_tzp();
 
+static Date gregorian_date_from_locale_string (const std::string& str);
+
 /* To ensure things aren't overly screwed up by setting the nanosecond clock for boost::date_time. Don't do it, though, it doesn't get us anything and slows down the date/time library. */
 #ifndef BOOST_DATE_TIME_HAS_NANOSECONDS
 static constexpr auto ticks_per_second = INT64_C(1000000);
@@ -76,7 +85,7 @@ static constexpr auto ticks_per_second = INT64_C(1000000000);
 #endif
 
 /* Vector of date formats understood by gnucash and corresponding regex
- * to parse each from an external source
+ * and/or string->gregorian_date to parse each from an external source
  * Note: while the format names are using a "-" as separator, the
  * regexes will accept any of "-/.' " and will also work for dates
  * without separators.
@@ -84,6 +93,7 @@ static constexpr auto ticks_per_second = INT64_C(1000000000);
 const std::vector<GncDateFormat> GncDate::c_formats ({
     GncDateFormat {
         N_("y-m-d"),
+        boost::gregorian::from_string,
         "(?:"                                   // either y-m-d
         "(?<YEAR>[0-9]+)[-/.' ]+"
         "(?<MONTH>[0-9]+)[-/.' ]+"
@@ -96,6 +106,7 @@ const std::vector<GncDateFormat> GncDate::c_formats ({
     },
     GncDateFormat {
         N_("d-m-y"),
+        boost::gregorian::from_uk_string,
         "(?:"                                   // either d-m-y
         "(?<DAY>[0-9]+)[-/.' ]+"
         "(?<MONTH>[0-9]+)[-/.' ]+"
@@ -108,6 +119,7 @@ const std::vector<GncDateFormat> GncDate::c_formats ({
     },
     GncDateFormat {
         N_("m-d-y"),
+        boost::gregorian::from_us_string,
         "(?:"                                   // either m-d-y
         "(?<MONTH>[0-9]+)[-/.' ]+"
         "(?<DAY>[0-9]+)[-/.' ]+"
@@ -143,7 +155,8 @@ const std::vector<GncDateFormat> GncDate::c_formats ({
         "(?<DAY>[0-9]{2})"
         "(?<YEAR>[0-9]+)?"
         ")"
-    }
+    },
+    GncDateFormat { N_("Locale"), gregorian_date_from_locale_string },
 });
 
 /** Private implementation of GncDateTime. See the documentation for that class.
@@ -282,7 +295,8 @@ public:
     GncDateTimeImpl(const time64 time) : m_time(LDT_from_unix_local(time)) {}
     GncDateTimeImpl(const struct tm tm) : m_time(LDT_from_struct_tm(tm)) {}
     GncDateTimeImpl(const GncDateImpl& date, DayPart part = DayPart::neutral);
-    GncDateTimeImpl(std::string str);
+    GncDateTimeImpl(const std::string& str) : GncDateTimeImpl (str.c_str()) {};
+    GncDateTimeImpl(const char* str);
     GncDateTimeImpl(PTime&& pt) : m_time(pt, tzp->get(pt.date().year())) {}
     GncDateTimeImpl(LDT&& ldt) : m_time(ldt) {}
 
@@ -339,6 +353,50 @@ GncDateTimeImpl::GncDateTimeImpl(const GncDateImpl& date, DayPart part) :
 /* Member function definitions for GncDateTimeImpl.
  */
 
+static bool
+parse_chars_into_num (const char* ptr, const char *end_ptr, int32_t& rv) noexcept
+{
+    auto result = std::from_chars (ptr, end_ptr, rv);
+    return (result.ec == std::errc() && result.ptr == end_ptr);
+}
+
+static std::optional<PTime>
+fast_iso8601_utc_parse (const char* str)
+{
+    int32_t year, month, mday, hour, min, sec;
+
+    // parse the first 4 bytes into year
+    if (!str || !parse_chars_into_num (str, str + 4, year))
+        return {};
+
+    // parse iso-8601 utc format "YYYY-MM-DD HH:MM:SS +0000"
+    if (str[4] == '-' &&
+        parse_chars_into_num (str +  5, str +  7, month) && str[ 7] == '-' &&
+        parse_chars_into_num (str +  8, str + 10, mday)  && str[10] == ' ' &&
+        parse_chars_into_num (str + 11, str + 13, hour)  && str[13] == ':' &&
+        parse_chars_into_num (str + 14, str + 16, min)   && str[16] == ':' &&
+        parse_chars_into_num (str + 17, str + 19, sec)   && str[19] == ' ' &&
+        !strcmp (str + 20, "+0000"))
+    {
+        return PTime (boost::gregorian::date (year, month, mday),
+                      boost::posix_time::time_duration (hour, min, sec));
+    }
+
+    // parse compressed iso-8601 format "YYYYMMDDHHMMSS"
+    if (parse_chars_into_num (str +  4, str +  6, month) &&
+        parse_chars_into_num (str +  6, str +  8, mday)  &&
+        parse_chars_into_num (str +  8, str + 10, hour)  &&
+        parse_chars_into_num (str + 10, str + 12, min)   &&
+        parse_chars_into_num (str + 12, str + 14, sec)   &&
+        str[14] == '\0')
+    {
+        return PTime (boost::gregorian::date (year, month, mday),
+                      boost::posix_time::time_duration (hour, min, sec));
+    }
+
+    return {};
+}
+
 static TZ_Ptr
 tz_from_string(std::string str)
 {
@@ -353,17 +411,22 @@ tz_from_string(std::string str)
     return TZ_Ptr(new PTZ(tzstr));
 }
 
-GncDateTimeImpl::GncDateTimeImpl(std::string str) :
+GncDateTimeImpl::GncDateTimeImpl(const char* str) :
     m_time(unix_epoch, utc_zone)
 {
-    if (str.empty()) return;
+    if (!str || !str[0]) return;
     TZ_Ptr tzptr;
     try
     {
+        if (auto res = fast_iso8601_utc_parse (str))
+        {
+            m_time = LDT_from_date_time(res->date(), res->time_of_day(), utc_zone);
+            return;
+        }
         static const boost::regex delim_iso("^(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}(?:\\.\\d{0,9})?)\\s*([+-]\\d{2}(?::?\\d{2})?)?$");
         static const boost::regex non_delim("^(\\d{14}(?:\\.\\d{0,9})?)\\s*([+-]\\d{2}\\s*(:?\\d{2})?)?$");
         PTime pdt;
-        boost::smatch sm;
+        boost::cmatch sm;
         if (regex_match(str, sm, non_delim))
         {
             std::string time_str(sm[1]);
@@ -376,7 +439,7 @@ GncDateTimeImpl::GncDateTimeImpl(std::string str) :
         }
         else
         {
-            throw(std::invalid_argument("The date string was not formatted in a way that GncDateTime(std::string) knows how to parse."));
+            throw(std::invalid_argument("The date string was not formatted in a way that GncDateTime(const char*) knows how to parse."));
         }
         std::string tzstr("");
         if (sm[2].matched)
@@ -555,6 +618,65 @@ GncDateTimeImpl::timestamp()
     return str.substr(0, 8) + str.substr(9, 15);
 }
 
+struct ICUResources
+{
+    std::unique_ptr<icu::DateFormat> formatter;
+    std::unique_ptr<icu::Calendar> calendar;
+};
+
+static ICUResources&
+get_icu_resources()
+{
+    static ICUResources rv;
+
+    if (!rv.formatter)
+    {
+        icu::Locale locale;
+        if (auto lc_time_locale = setlocale (LC_TIME, nullptr))
+        {
+            std::string localeStr(lc_time_locale);
+            if (size_t dotPos = localeStr.find('.'); dotPos != std::string::npos)
+                localeStr = localeStr.substr(0, dotPos);
+
+            locale = icu::Locale::createCanonical (localeStr.c_str());
+        }
+
+        rv.formatter.reset(icu::DateFormat::createDateInstance(icu::DateFormat::kDefault, locale));
+        if (!rv.formatter)
+            throw std::invalid_argument("Cannot create date formatter.");
+
+        UErrorCode status = U_ZERO_ERROR;
+        rv.calendar.reset(icu::Calendar::createInstance(locale, status));
+        if (U_FAILURE(status))
+            throw std::invalid_argument("Cannot create calendar instance.");
+
+        rv.calendar->setLenient(false);
+    }
+
+    return rv;
+}
+
+static Date
+gregorian_date_from_locale_string (const std::string& str)
+{
+    ICUResources& resources = get_icu_resources();
+
+    icu::UnicodeString input = icu::UnicodeString::fromUTF8(str);
+    icu::ParsePosition parsePos;
+    UDate date = resources.formatter->parse(input, parsePos);
+    if (parsePos.getErrorIndex() != -1 || parsePos.getIndex() != input.length())
+        throw std::invalid_argument ("Cannot parse string");
+
+    UErrorCode status = U_ZERO_ERROR;
+    resources.calendar->setTime(date, status);
+    if (U_FAILURE(status))
+        throw std::invalid_argument ("Cannot set calendar time");
+
+    return Date (resources.calendar->get(UCAL_YEAR, status),
+                 resources.calendar->get(UCAL_MONTH, status) + 1,
+                 resources.calendar->get(UCAL_DATE, status));
+}
+
 /* Member function definitions for GncDateImpl.
  */
 GncDateImpl::GncDateImpl(const std::string str, const std::string fmt) :
@@ -564,6 +686,19 @@ GncDateImpl::GncDateImpl(const std::string str, const std::string fmt) :
                              [&fmt](const GncDateFormat& v){ return (v.m_fmt == fmt); } );
     if (iter == GncDate::c_formats.cend())
         throw std::invalid_argument(N_("Unknown date format specifier passed as argument."));
+
+    if (iter->m_str_to_date)
+    {
+        try
+        {
+            m_greg = (*iter->m_str_to_date)(str);
+            return;
+        }
+        catch (...) {}          // with any string->date exception, try regex
+    }
+
+    if (iter->m_re.empty())
+        throw std::invalid_argument ("No regex pattern available");
 
     boost::regex r(iter->m_re);
     boost::smatch what;
@@ -633,7 +768,9 @@ GncDateTime::GncDateTime(const time64 time) :
     m_impl(new GncDateTimeImpl(time)) {}
 GncDateTime::GncDateTime(const struct tm tm) :
     m_impl(new GncDateTimeImpl(tm)) {}
-GncDateTime::GncDateTime(std::string str) :
+GncDateTime::GncDateTime(const std::string& str) :
+    m_impl(new GncDateTimeImpl(str)) {}
+GncDateTime::GncDateTime(const char* str) :
     m_impl(new GncDateTimeImpl(str)) {}
 GncDateTime::~GncDateTime() = default;
 

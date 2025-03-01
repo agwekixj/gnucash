@@ -39,6 +39,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <cstdint>
 
 #include "gnc-tokenizer.hpp"
 #include "gnc-imp-props-tx.hpp"
@@ -52,12 +53,15 @@ extern const gchar* currency_format_user[];
 /** An enum describing the columns found in a parse_line_t. Currently these are:
  *  - a tokenized line of input
  *  - an optional error string
- *  - a struct to hold user selected properties for a transaction
+ *  - a struct to hold user selected properties for a transaction as found on the current line
  *  - a struct to hold user selected properties for one or two splits in the above transaction
+ *    this split struct also contains a trans props struct like above, but the included one
+ *    may be shared by several split lines that comprise a single transaction
  *  - a boolean to mark the line as skipped by error and/or user or not */
 enum parse_line_cols {
     PL_INPUT,
     PL_ERROR,
+    PL_PRETRANS,
     PL_PRESPLIT,
     PL_SKIP
 };
@@ -69,6 +73,7 @@ using StrVec = std::vector<std::string>;
  * with std::get to access the columns. */
 using parse_line_t = std::tuple<StrVec,
                                 ErrMap,
+                                std::shared_ptr<GncPreTrans>,
                                 std::shared_ptr<GncPreSplit>,
                                 bool>;
 
@@ -178,10 +183,12 @@ private:
      */
     std::shared_ptr<DraftTransaction> trans_properties_to_trans (std::vector<parse_line_t>::iterator& parsed_line);
 
-    /* Internal helper function that should only be called from within
+    /* Internal helper functions that should only be called from within
      * set_column_type for consistency (otherwise error messages may not be (re)set)
      */
-    void update_pre_trans_split_props (uint32_t row, uint32_t col, GncTransPropType old_type, GncTransPropType new_type);
+    void update_pre_split_multi_col_prop (parse_line_t& parsed_line, GncTransPropType col_type);
+    void update_pre_trans_props (parse_line_t& parsed_line, uint32_t col, GncTransPropType old_type, GncTransPropType new_type);
+    void update_pre_split_props (parse_line_t& parsed_line, uint32_t col, GncTransPropType old_type, GncTransPropType new_type);
 
     CsvTransImpSettings m_settings;
     bool m_skip_errors;

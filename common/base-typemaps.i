@@ -69,6 +69,16 @@ typedef char gchar;
 %typemap(in) time64 * (time64 t) "t = scm_to_int64($input); $1 = &t;"
 %typemap(out) time64 * " $result = ($1) ? scm_from_int64(*($1)) : SCM_BOOL_F; "
 
+%typemap(in) QofIdType " $1 = scm_to_utf8_string ($input); "
+%typemap(out) QofIdType " $result = $1 ? scm_from_utf8_string ($1) : SCM_BOOL_F; "
+%typemap(freearg) QofIdType " g_free ((gpointer)$1); "
+%typemap(newfree) QofIdType " g_free ((gpointer)$1); "
+
+%typemap(in) QofIdTypeConst " $1 = scm_to_utf8_string ($input); "
+%typemap(out) QofIdTypeConst " $result = $1 ? scm_from_utf8_string ($1) : SCM_BOOL_F; "
+%typemap(freearg) QofIdTypeConst " g_free ((gpointer)$1); "
+%typemap(newfree) QofIdTypeConst " g_free ((gpointer)$1); "
+
 %typemap(in) struct tm * (struct tm t, char *tzone) {
     SCM tm = $input;
     t.tm_sec = scm_to_int(SCM_SIMPLE_VECTOR_REF(tm, 0));
@@ -152,6 +162,38 @@ typedef char gchar;
   $result = scm_reverse(list);
 }
 %enddef
+
+
+%define VECTOR_HELPER_INOUT(VectorType, ElemSwigType, ElemType)
+%typemap(in) VectorType {
+  std::vector<ElemType*> accum;
+  for (auto node = $input; !scm_is_null (node); node = scm_cdr (node))
+  {
+      auto p_scm = scm_car (node);
+      auto p = (scm_is_false (p_scm) || scm_is_null (p_scm)) ? static_cast<ElemType*>(nullptr) :
+          static_cast<ElemType*>(SWIG_MustGetPtr(p_scm, ElemSwigType, 1, 0));
+      accum.push_back (p);
+  }
+  accum.swap ($1);
+}
+
+%typemap(out) VectorType {
+  SCM list = SCM_EOL;
+  std::for_each ($1.rbegin(), $1.rend(), [&list](auto n)
+                 { list = scm_cons(SWIG_NewPointerObj(n, ElemSwigType, 0), list); });
+  $result = list;
+}
+%enddef
+
+
+%define VECTORREF_HELPER_INOUT(VectorType, ElemSwigType, ElemType)
+
+%typemap(out) VectorType {
+    auto accum = [](SCM acc, auto n){ return scm_cons(SWIG_NewPointerObj(n, ElemSwigType, 0), acc); };
+    $result = std::accumulate ($1->rbegin(), $1->rend(), SCM_EOL, accum);
+}
+%enddef
+
 #elif defined(SWIGPYTHON) /* Typemaps for Python */
 
 %import "glib.h"

@@ -5,11 +5,11 @@ add_subdirectory(test)
 add_subdirectory(mocks)
 
 set(engine_noinst_HEADERS
-  AccountP.h
-  SplitP.h
+  AccountP.hpp
+  SplitP.hpp
   SX-book.h
-  SX-ttinfo.h
-  TransactionP.h
+  SX-ttinfo.hpp
+  TransactionP.hpp
   gnc-backend-prov.hpp
   gnc-date-p.h
   gnc-int128.hpp
@@ -31,12 +31,14 @@ set(engine_noinst_HEADERS
 )
 
 set (engine_HEADERS
+  Account.hpp
   Account.h
   FreqSpec.h
   Recurrence.h
   SchedXaction.h
+  SchedXaction.hpp
   SX-book.h
-  SX-ttinfo.h
+  SX-ttinfo.hpp
   Query.h
   Scrub.h
   Scrub2.h
@@ -107,7 +109,6 @@ set (engine_HEADERS
   qofbook.h
   qofbook.hpp
   qofbookslots.h
-  qofchoice.h
   qofclass.h
   qofevent.h
   qofid-p.h
@@ -137,34 +138,33 @@ add_custom_target(iso-4217-c DEPENDS ${ISO_4217_C})
 
 set (engine_SOURCES
   Account.cpp
-  Recurrence.c
-  Query.c
-  SchedXaction.c
-  SX-book.c
-  SX-ttinfo.c
-  Scrub.c
-  Scrub2.c
-  Scrub3.c
+  Recurrence.cpp
+  Query.cpp
+  SchedXaction.cpp
+  SX-book.cpp
+  Scrub.cpp
+  Scrub2.cpp
+  Scrub3.cpp
   ScrubBusiness.c
   ScrubBudget.c
-  Split.c
-  TransLog.c
-  Transaction.c
-  cap-gains.c
-  cashobjects.c
+  Split.cpp
+  TransLog.cpp
+  Transaction.cpp
+  cap-gains.cpp
+  cashobjects.cpp
   gnc-accounting-period.c
   gnc-aqbanking-templates.cpp
   gnc-budget.cpp
-  gnc-commodity.c
+  gnc-commodity.cpp
   gnc-date.cpp
   gnc-datetime.cpp
-  gnc-engine.c
-  gnc-euro.c
+  gnc-engine.cpp
+  gnc-euro.cpp
   gnc-event.c
   gnc-features.cpp
   gnc-hooks.c
   gnc-int128.cpp
-  gnc-lot.c
+  gnc-lot.cpp
   gnc-numeric.cpp
   gnc-option-date.cpp
   gnc-option.cpp
@@ -177,7 +177,7 @@ set (engine_SOURCES
   gnc-uri-utils.c
   engine-helpers.c
   guid.cpp
-  policy.c
+  policy.cpp
   gncAddress.c
   gncBillTerm.c
   gncBusiness.c
@@ -195,7 +195,6 @@ set (engine_SOURCES
   kvp-value.cpp
   qof-backend.cpp
   qofbook.cpp
-  qofchoice.cpp
   qofclass.cpp
   qofevent.cpp
   qofid.cpp
@@ -238,7 +237,7 @@ target_link_libraries(gnc-engine
     gnc-core-utils
     ${Boost_DATE_TIME_LIBRARY}
     ${Boost_REGEX_LIBRARY}
-    ${ICU4C_I18N_LDFLAGS}
+    ${ICU_LIBRARIES}
     ${REGEX_LDFLAGS}
     ${GMODULE_LDFLAGS}
     PkgConfig::GLIB2
@@ -263,6 +262,10 @@ if (APPLE)
   set_target_properties (gnc-engine PROPERTIES INSTALL_NAME_DIR "${CMAKE_INSTALL_FULL_LIBDIR}")
 endif()
 
+if (COVERAGE)
+  add_coverage_target(gnc-engine)
+endif()
+
 install(TARGETS gnc-engine
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -271,8 +274,6 @@ install(TARGETS gnc-engine
 install(FILES ${engine_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/gnucash)
 
 set(engine_EXTRA_DIST
-        design.txt
-        extensions.txt
         iso-4217-currencies.xml
         iso-currencies-to-c.xsl
         kvp_doc.txt

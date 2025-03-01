@@ -32,6 +32,7 @@
 (use-modules (gnucash core-utils))
 (use-modules (gnucash engine))
 (use-modules (gnucash app-utils))
+(use-modules (gnucash utilities))
 (use-modules (srfi srfi-1))
 (use-modules (gnucash qif-import qif-utils))
 
@@ -65,7 +66,7 @@
   ;; This procedure does all the work. We'll define it, then call it safely.
   (define (private-find)
     (cond
-     ((any (compose pair? xaccAccountGetSplitList) old-accounts)
+     ((any (compose positive? xaccAccountGetSplitsSize) old-accounts)
       ;; Get all the splits in the new tree, then iterate over them
       ;; trying to find matches in the old tree.  If there are
       ;; matches, push the splits' parent onto a list.
@@ -85,10 +86,14 @@
                 (dates (map (compose xaccTransGetDate xaccSplitGetParent) new-splits)))
             (qof-query-set-book q (gnc-account-get-book old-root))
             (xaccQueryAddAccountMatch q old-accounts QOF-GUID-MATCH-ANY QOF-QUERY-AND)
-            (xaccQueryAddDateMatchTT q
-                                     #t (decdate (apply min dates) WeekDelta)
-                                     #t (incdate (apply max dates) WeekDelta)
-                                     QOF-QUERY-AND)
+            (cond
+             ((null? dates)
+              (gnc:warn "Probable error: the new account tree has no transactions."))
+             (else
+              (xaccQueryAddDateMatchTT q
+                                       #t (decdate (apply min dates) WeekDelta)
+                                       #t (incdate (apply max dates) WeekDelta)
+                                       QOF-QUERY-AND)))
             (let ((splits (qof-query-run q)))
               (qof-query-destroy q)
               splits)))

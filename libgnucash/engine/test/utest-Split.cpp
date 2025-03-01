@@ -28,14 +28,14 @@
 #include <unittest-support.h>
 /* Add specific headers for this class */
 #include <Split.h>
-#include <SplitP.h>
+#include <SplitP.hpp>
 #include <Account.h>
 #include <Transaction.h>
-#include <TransactionP.h>
+#include <TransactionP.hpp>
 #include <gnc-lot.h>
 #include <gnc-event.h>
 
-#if defined(__clang__) && (__clang_major__ == 5 || (__clang_major__ == 3 && __clang_minor__ < 5))
+#if defined(__clang__)
 #define USE_CLANG_FUNC_SIG 1
 #endif
 
@@ -75,7 +75,7 @@ setup (Fixture *fixture, gconstpointer pData)
     xaccTransSetCurrency (txn, fixture->curr);
     xaccSplitSetParent (fixture->split, txn);
     xaccTransCommitEdit (txn);
-    gnc_lot_set_account (lot, acc);
+    xaccAccountInsertLot (acc, lot);
     fixture->split->action = CACHE_INSERT ("foo");
     fixture->split->memo = CACHE_INSERT ("bar");
     fixture->split->acc = acc;
@@ -414,7 +414,7 @@ test_xaccSplitEqual (Fixture *fixture, gconstpointer pData)
 {
     Split *split1 = xaccSplitCloneNoKvp (fixture->split);
     Split *split2 = xaccDupeSplit (fixture->split);
-    gchar *msg01 = "[xaccSplitEqual] one is NULL";
+    gchar *msg01 = "[xaccSplitEqual] one is nullptr";
     gchar *msg02 = "[xaccSplitEqual] GUIDs differ";
     gchar *msg03;
     gchar *msg04 = "[xaccSplitEqual] actions differ: foo vs bar";
@@ -423,7 +423,7 @@ test_xaccSplitEqual (Fixture *fixture, gconstpointer pData)
     G_GNUC_UNUSED gchar *msg07 = "[xaccSplitEqual] reconciled date differs";
     G_GNUC_UNUSED gchar *msg08 = "[xaccSplitEqual] amounts differ: foo vs bar";
     gchar *msg10 = "[xaccSplitEqual] transactions differ";
-    gchar *msg11 = "[xaccTransEqual] one is NULL";
+    gchar *msg11 = "[xaccTransEqual] one is nullptr";
     gchar *msg12 = "[xaccSplitEqualCheckBal] balances differ: 321/1000 vs 0/1";
     gchar *msg13 = "[xaccSplitEqualCheckBal] cleared balances differ: 321/1000 vs 0/1";
     gchar *msg14 = "[xaccSplitEqualCheckBal] reconciled balances differ: 321/1000 vs 0/1";
@@ -1282,7 +1282,7 @@ test_get_corr_account_split (Fixture *fixture, gconstpointer pData)
 #ifdef USE_CLANG_FUNC_SIG
 #define _func "gboolean get_corr_account_split(const Split *, const Split **)"
 #else
-#define _func "get_corr_account_split"
+#define _func "gboolean get_corr_account_split(const Split*, const Split**)"
 #endif
     gchar *msg = _func ": assertion 'sa' failed";
 #undef _func

@@ -244,14 +244,14 @@ gnc_prices_dialog_load_view (GtkTreeView *view, GNCPriceDB *pdb)
     const auto commodity_table = gnc_get_current_commodities ();
     auto namespace_list = gnc_commodity_table_get_namespaces (commodity_table);
 
-    while (namespace_list)
+    for (auto node_n = namespace_list; node_n; node_n = g_list_next (node_n))
     {
-        auto tmp_namespace = static_cast<char *> (namespace_list->data);
+        auto tmp_namespace = static_cast<char*>(node_n->data);
         DEBUG("Looking at namespace %s", tmp_namespace);
         auto commodity_list = gnc_commodity_table_get_commodities (commodity_table, tmp_namespace);
-        while (commodity_list)
+        for (auto node_c = commodity_list; node_c; node_c = g_list_next (node_c))
         {
-            auto tmp_commodity = static_cast<gnc_commodity *> (commodity_list->data);
+            auto tmp_commodity = static_cast<gnc_commodity*>(node_c->data);
             auto num = gnc_pricedb_num_prices (pdb, tmp_commodity);
             DEBUG("Looking at commodity %s, Number of prices %d", gnc_commodity_get_fullname (tmp_commodity), num);
 
@@ -276,12 +276,10 @@ gnc_prices_dialog_load_view (GtkTreeView *view, GNCPriceDB *pdb)
 
                 g_free (date_str);
                 g_free (num_str);
-                gnc_price_unref (price);
+                g_list_free_full (list, (GDestroyNotify)gnc_price_unref);
             }
-            commodity_list = g_list_next (commodity_list);
         }
         g_list_free (commodity_list);
-        namespace_list = g_list_next (namespace_list);
     }
     g_list_free (namespace_list);
 
@@ -534,9 +532,23 @@ gnc_prices_dialog_add_clicked (GtkWidget *widget, gpointer data)
     {
         if (!gnc_list_length_cmp (comm_list, 1)) // make sure it is only one parent
         {
-            price = gnc_price_create (pdb_dialog->book);
-            auto comm = static_cast<gnc_commodity *> (comm_list->data);
-            gnc_price_set_commodity (price, comm);
+            auto comm = GNC_COMMODITY (comm_list->data);
+            auto latest_price = gnc_pricedb_lookup_latest_any_currency (pdb_dialog->price_db, comm);
+
+            if (latest_price)
+            {
+                price = GNC_PRICE (latest_price->data);
+                gnc_price_ref (price);
+
+                gnc_price_list_destroy (latest_price);
+            }
+
+            if (!price)
+            {
+                price = gnc_price_create (pdb_dialog->book);
+                gnc_price_set_commodity (price, comm);
+            }
+
             unref_price = TRUE;
         }
         g_list_free (comm_list);
@@ -623,15 +635,17 @@ gnc_price_dialog_filter_ns_func (gnc_commodity_namespace *name_space,
 
     /* See if this namespace has commodities */
     auto cm_list = gnc_commodity_namespace_get_commodity_list (name_space);
-    for (auto item = cm_list; item; item = g_list_next (item))
+    auto rv = false;
+    for (auto item = cm_list; !rv && item; item = g_list_next (item))
     {
         /* For each commodity, see if there are prices */
         auto comm = static_cast<gnc_commodity *> (item->data);
         if (gnc_pricedb_has_prices (pdb_dialog->price_db, comm, nullptr))
-            return TRUE;
+            rv = true;
     }
 
-    return FALSE;
+    g_list_free (cm_list);
+    return rv;
 }
 
 

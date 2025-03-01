@@ -708,7 +708,7 @@ GncDbiBackend<Type>::session_begin (QofSession* session, const char* new_uri,
     else if (m_exists)
     {
         PERR ("Unable to connect to database '%s'\n", uri.dbname());
-        set_error (ERR_BACKEND_SERVER_ERR);
+        set_error (ERR_BACKEND_CANT_CONNECT);
         dbi_conn_close(conn);
         LEAVE("Error");
         return;
@@ -1030,7 +1030,7 @@ template<> bool
 QofDbiBackendProvider<DbType::DBI_SQLITE>::type_check(const char *uri)
 {
     FILE* f;
-    gchar buf[50];
+    gchar buf[51]{};
     G_GNUC_UNUSED size_t chars_read;
     gint status;
     gchar* filename;
@@ -1050,7 +1050,7 @@ QofDbiBackendProvider<DbType::DBI_SQLITE>::type_check(const char *uri)
     }
 
     // OK if file has the correct header
-    chars_read = fread (buf, sizeof (buf), 1, f);
+    chars_read = fread (buf, sizeof (buf) - 1, 1, f);
     status = fclose (f);
     if (status < 0)
     {

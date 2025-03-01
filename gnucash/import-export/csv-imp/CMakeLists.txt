@@ -62,7 +62,7 @@ add_library(gnc-csv-import ${csv_import_noinst_HEADERS}
 target_link_libraries(
   gnc-csv-import
   ${Boost_LIBRARIES}
-  ${ICU4C_I18N_LDFLAGS}
+  ${ICU_LIBRARIES}
   gnc-generic-import
   gnc-gnome-utils
   gnc-app-utils
@@ -82,6 +82,10 @@ target_include_directories(gnc-csv-import
 
 if (APPLE)
   set_target_properties (gnc-csv-import PROPERTIES INSTALL_NAME_DIR "${CMAKE_INSTALL_FULL_LIBDIR}/gnucash")
+endif()
+
+if (COVERAGE)
+  add_coverage_target(gnc-csv-import)
 endif()
 
 install(TARGETS gnc-csv-import

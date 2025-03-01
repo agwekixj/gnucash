@@ -37,6 +37,11 @@
       <summary>Set the sort direction in the "since last run" dialog.</summary>
       <description>This settings sets the sort direction in the "since last run" dialog.</description>
     </key>
+    <key name="sort-depth" type="i">
+      <default>1</default>
+      <summary>The depth used in the tree to sort in the "since last run" dialog.</summary>
+      <description>The depth used in the tree to sort in the "since last run" dialog.</description>
+    </key>
   </schema>
   <schema id="org.gnucash.GnuCash.dialogs.sxs.transaction-editor" path="/org/gnucash/GnuCash/dialogs/scheduled-trans/transaction-editor/">
     <key name="create-auto" type="b">
@@ -48,6 +53,16 @@
       <default>0</default>
       <summary>How many days in advance to notify the user.</summary>
       <description>How many days in advance to notify the user.</description>
+    </key>
+    <key name="number-of-months" type="i">
+      <default>12</default>
+      <summary>The number of months to be shown in editor.</summary>
+      <description>The number of months to be shown in editor.</description>
+    </key>
+    <key name="divider-position" type="i">
+      <default>160</default>
+      <summary>The horizontal position of the editor divider.</summary>
+      <description>The horizontal position of the editor divider.</description>
     </key>
     <key name="last-geometry" type="(iiii)">
       <default>(-1,-1,-1,-1)</default>

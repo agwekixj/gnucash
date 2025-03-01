@@ -141,10 +141,6 @@ typedef enum
     QOF_DATE_COMPLETION_SLIDING,  /**< use sliding 12-month window */
 } QofDateCompletion;
 
-/** \deprecated qof_date_format_get_format has been replaced
-by qof_date_text_format_get_string */
-#define qof_date_format_get_format qof_date_text_format_get_string
-
 /**
  * This is how to format the month, as a number, an abbreviated string,
  * or the full name.
@@ -228,6 +224,7 @@ gchar* gnc_ctime (const time64 *secs);
 time64 gnc_time (time64 *tbuf);
 
 /** \brief Find the difference in seconds between two time values
+ *         (deprecated)
  *  \param secs1: The first time value, in Seconds since
  * 00:00:00 UTC 01 January 1970 (negative values are seconds before that moment)
  *  \param secs2: The second time value, in Seconds since
@@ -812,17 +809,6 @@ void gnc_gdate_set_prev_fiscal_year_start (GDate *date, const GDate *year_end);
  *  @param year_end A GDate containing the last month and day of the
  *  fiscal year.  The year field of this argument is ignored. */
 void gnc_gdate_set_prev_fiscal_year_end (GDate *date, const GDate *year_end);
-
-
-
-/** This function takes a GList of char*, and uses locale-sensitive
- *  list formatter.
- *
- *  @param strings The GList* of char*.
- *
- * @returns a newly allocated char*
- */
-gchar* gnc_list_formatter (GList* strings);
 
 //@}
 

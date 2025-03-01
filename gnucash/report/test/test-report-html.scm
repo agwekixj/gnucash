@@ -13,28 +13,10 @@
 (use-modules (tests test-engine-extras))
 (use-modules (tests test-report-extras))
 (use-modules (tests srfi64-extras))
-(use-modules (system vm coverage))
-
-(define (coverage-test)
-  (let* ((currfile (dirname (current-filename)))
-         (path (string-take currfile (string-rindex currfile #\/))))
-    (add-to-load-path path))
-  (call-with-values
-      (lambda()
-        (with-code-coverage run-test-proper))
-    (lambda (data result)
-      (let ((port (open-output-file "/tmp/lcov.info")))
-        (coverage-data->lcov data port)
-        (close port)))))
 
 (define (run-test)
-  (if #f
-      (coverage-test)
-      (run-test-proper)))
-
-(define (run-test-proper)
     (test-runner-factory gnc:test-runner)
-    (test-begin "Testing/Temporary/test-report-html")
+    (test-begin "test-report-html")
       ;; if (test-runner-factory gnc:test-runner) is commented out, this
       ;; will create Testing/Temporary/test-report-html.log
     (test-html-document-defintion)
@@ -44,7 +26,7 @@
     (test-html-table)
     (test-gnc:html-table-add-labeled-amount-line!)
     (test-gnc:make-html-acct-table/env/accts)
-    (test-end "Testing/Temporary/test-report-html")
+    (test-end "test-report-html")
 )
 
 (define html-doc-header-no-title
@@ -102,7 +84,7 @@ HTML Document Title</title></head><body></body>\n\
     )
   )
 
-  (test-end "HTML Document - Creation")
+  (test-end "HTML Document - Basic Creation")
 )
 
 ;; -----------------------------------------------------------------------

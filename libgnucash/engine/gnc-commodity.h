@@ -158,18 +158,6 @@ gboolean gnc_quote_source_fq_installed (void);
  */
 const char* gnc_quote_source_fq_version (void);
 
-/** Update gnucash internal tables based on what Finance::Quote
- *  sources are installed.  Sources that have been explicitly coded
- *  into gnucash are marked sensitive/insensitive based upon whether
- *  they are present. New sources that gnucash doesn't know about are
- *  added to its internal tables.
- *
- *  @param sources_list A list of strings containing the source names
- *  as they are known to F::Q.
- */
-void gnc_quote_source_set_fq_installed (const char* version_string,
-                                        const GList *sources_list);
-
 /** Return the number of entries for a given type of quote source.
  *
  *  @param type The quote source type whose count should be returned.
@@ -826,7 +814,7 @@ const char * gnc_commodity_namespace_get_gui_name (const gnc_commodity_namespace
  *  @return A pointer to the list of structures.  NULL if an invalid
  *  argument was supplied.
  *
- *  @note This list is owned by the engine.  The caller must not free the list. */
+ *  @note This list is owned by the caller who must free the list. */
 GList * gnc_commodity_namespace_get_commodity_list(const gnc_commodity_namespace * ns);
 
 
@@ -856,7 +844,7 @@ GList * gnc_commodity_table_get_namespaces(const gnc_commodity_table * t);
  *  @return A pointer to the list of structures.  NULL if an invalid
  *  argument was supplied.
  *
- *  @note This list is owned by the engine.  The caller must not free the list. */
+ *  @note This list is owned by the caller who must free the list. */
 GList * gnc_commodity_table_get_namespaces_list(const gnc_commodity_table * t);
 
 /** This function adds a new string to the list of commodity namespaces.

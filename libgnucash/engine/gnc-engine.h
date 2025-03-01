@@ -130,7 +130,7 @@ extern "C" {
 
 /** @brief Account in Gnucash.
  * This is the typename for an account. The actual structure is
- * defined in the private header AccountP.h, but no one outside the
+ * defined in the private header AccountP.hpp, but no one outside the
  * engine should include that file. Instead, access that data only
  * through the functions in Account.h .*/
 typedef struct account_s             Account;
@@ -142,7 +142,7 @@ typedef struct account_s             Account;
  * divided into.
  *
  * This is the typename for a split. The actual structure is defined
- * in the private header TransactionP.h, but no one outside the engine
+ * in the private header TransactionP.hpp, but no one outside the engine
  * should include that file. Instead, access that data only through
  * the functions in Transaction.h .*/
 typedef struct split_s               Split;
@@ -153,7 +153,7 @@ typedef struct split_s               Split;
  * divided into one or more Splits (usually two).
  *
  * This is the typename for a transaction. The actual structure is
- * defined in the private header TransactionP.h, but no one outside
+ * defined in the private header TransactionP.hpp, but no one outside
  * the engine should include that file. Instead, access that data only
  * through the functions in Transaction.h .*/
 typedef struct transaction_s         Transaction;

@@ -28,14 +28,14 @@
 #include <unittest-support.h>
 /* Add specific headers for this class */
 #include "../Transaction.h"
-#include "../TransactionP.h"
+#include "../TransactionP.hpp"
 #include "../Split.h"
 #include "../Account.h"
 #include "../gnc-lot.h"
 #include "../gnc-event.h"
 #include <qof.h>
 
-#if defined(__clang__) && (__clang_major__ == 5 || (__clang_major__ == 3 && __clang_minor__ < 5))
+#if defined(__clang__)
 #define USE_CLANG_FUNC_SIG 1
 #endif
 
@@ -459,7 +459,7 @@ test_xaccMallocTransaction (Fixture *fixture, gconstpointer pData)
 #ifdef USE_CLANG_FUNC_SIG
 #define _func "Transaction *xaccMallocTransaction(QofBook *)"
 #else
-#define _func "xaccMallocTransaction"
+#define _func "Transaction* xaccMallocTransaction(QofBook*)"
 #endif
     auto msg = _func ": assertion 'book' failed";
 #undef _func
@@ -753,7 +753,7 @@ test_xaccTransEqual (Fixture *fixture, gconstpointer pData)
     Transaction *txn1 = xaccTransClone (txn0);
     const GncGUID *guid_f_txn = qof_instance_get_guid (txn0);
     gchar entered[DATE_BUF_SIZE], posted[DATE_BUF_SIZE];
-    auto msg1 = "[xaccTransEqual] one is NULL";
+    auto msg1 = "[xaccTransEqual] one is nullptr";
     gchar *msg2 = NULL;
     auto cleanup_fmt = "[trans_cleanup_commit] get rid of rollback trans=%p";
     gchar split_guid0[GUID_ENCODING_LENGTH + 1];
@@ -1171,38 +1171,7 @@ test_xaccTransGetAccountAmount (Fixture *fixture, gconstpointer pData)
     g_assert_true (gnc_numeric_eq (xaccTransGetAccountAmount (fixture->txn, fixture->acc2), amt2));
 
 }
-/* xaccTransGetRateForCommodity
-gboolean
-xaccTransGetRateForCommodity(const Transaction *trans,
-                             const gnc_commodity *split_com,
-                             const Split *split, gnc_numeric *rate)
-*/
-static void
-test_xaccTransGetRateForCommodity (Fixture *fixture, gconstpointer pData)
-{
-    gnc_numeric rate = gnc_numeric_zero ();
-    QofBook *book = qof_instance_get_book (QOF_INSTANCE (fixture->txn));
-    auto split0 = xaccMallocSplit (book);
-    auto split1 = xaccTransFindSplitByAccount(fixture->txn, fixture->acc1);
-    g_assert_true (!xaccTransGetRateForCommodity (NULL, fixture->comm,
-              split0, &rate));
-    g_assert_true (!xaccTransGetRateForCommodity (fixture->txn, NULL,
-              split0, &rate));
-    g_assert_true (!xaccTransGetRateForCommodity (fixture->txn, fixture->comm,
-              NULL, &rate));
-    g_assert_true (xaccTransGetRateForCommodity (fixture->txn, fixture->curr,
-                                            split0, &rate));
-    g_assert_true (gnc_numeric_equal (rate, gnc_numeric_create (1, 1)));
-    rate = gnc_numeric_zero ();
-    g_assert_true (!xaccTransGetRateForCommodity (fixture->txn, fixture->comm,
-              split0, &rate));
-    g_assert_true (gnc_numeric_zero_p (rate));
 
-    g_assert_true (xaccTransGetRateForCommodity (fixture->txn, fixture->comm,
-                                            split1, &rate));
-    g_assert_true (gnc_numeric_equal (rate, gnc_numeric_create (1800, 240)));
-
-}
 /* xaccTransGetAccountConvRate
 gnc_numeric
 xaccTransGetAccountConvRate(const Transaction *txn, const Account *acc)// C: 5 in 4  Local: 0:0:0
@@ -1242,7 +1211,7 @@ test_xaccTransGetAccountBalance (Fixture *fixture, gconstpointer pData)
 #ifdef USE_CLANG_FUNC_SIG
 #define _func "gnc_numeric xaccTransGetAccountBalance(const Transaction *, const Account *)"
 #else
-#define _func "xaccTransGetAccountBalance"
+#define _func "gnc_numeric xaccTransGetAccountBalance(const Transaction*, const Account*)"
 #endif
     auto msg1 = _func ": assertion 'account && trans' failed";
 #undef _func
@@ -1419,7 +1388,7 @@ test_do_destroy (GainsFixture *fixture, gconstpointer pData)
    /* Protect against recursive calls to do_destroy from xaccTransCommitEdit */
     xaccTransBeginEdit(base->txn);
 
-    base->func->do_destroy (base->txn);
+    base->func->do_destroy (QOF_INSTANCE(base->txn));
     g_assert_cmpint (test_signal_return_hits (sig), ==, 1);
     g_assert_true (base->txn->description == NULL);
     g_assert_cmpint (GPOINTER_TO_INT(base->txn->num), ==, 1);
@@ -1472,7 +1441,7 @@ test_trans_on_error (Fixture *fixture, gconstpointer pData)
     gnc_engine_add_commit_error_callback ((EngineCommitErrorCallback)commit_error_cb, NULL);
     xaccTransBeginEdit (fixture->txn);
     g_assert_cmpint (qof_instance_get_editlevel (fixture->txn), ==, 1);
-    fixture->func->trans_on_error (fixture->txn, errcode);
+    fixture->func->trans_on_error (QOF_INSTANCE(fixture->txn), errcode);
     g_assert_cmpint (check->hits, ==, 1);
     g_assert_cmpint ((guint)errorvalue, ==, (guint)errcode);
     g_assert_cmpint (qof_instance_get_editlevel (fixture->txn), ==, 0);
@@ -1515,7 +1484,7 @@ test_trans_cleanup_commit (Fixture *fixture, gconstpointer pData)
     /*Reverse the splits list so we can check later that it got sorted */
     fixture->txn->splits = g_list_reverse (fixture->txn->splits);
     g_assert_true (fixture->txn->splits->data != split0);
-    fixture->func->trans_cleanup_commit (fixture->txn);
+    fixture->func->trans_cleanup_commit (QOF_INSTANCE(fixture->txn));
 
     g_assert_cmpint (test_signal_return_hits (sig_d_remove), ==, 1);
     g_assert_cmpint (test_signal_return_hits (sig_b_remove), ==, 1);
@@ -1540,7 +1509,7 @@ test_trans_cleanup_commit (Fixture *fixture, gconstpointer pData)
     fixture->txn->orig = orig;
     orig->num = fixture->txn->num;
     g_object_ref (orig);
-    fixture->func->trans_cleanup_commit (fixture->txn);
+    fixture->func->trans_cleanup_commit (QOF_INSTANCE(fixture->txn));
 
     g_assert_cmpint (test_signal_return_hits (sig_d_remove), ==, 2);
     g_assert_cmpint (test_signal_return_hits (sig_b_remove), ==, 1);
@@ -2063,7 +2032,6 @@ test_suite_transaction (void)
     GNC_TEST_ADD (suitename, "xaccTransIsBalanced", Fixture, NULL, setup, test_xaccTransIsBalanced, teardown);
     GNC_TEST_ADD (suitename, "xaccTransIsBalanced Trading Accounts", Fixture, NULL, setup, test_xaccTransIsBalanced_trading, teardown);
     GNC_TEST_ADD (suitename, "xaccTransGetAccountValue", Fixture, NULL, setup, test_xaccTransGetAccountValue, teardown);
-    GNC_TEST_ADD (suitename, "xaccTransGetRateForCommodity", Fixture, NULL, setup, test_xaccTransGetRateForCommodity, teardown);
     GNC_TEST_ADD (suitename, "xaccTransGetAccountAmount", Fixture, NULL, setup, test_xaccTransGetAccountAmount, teardown);
     GNC_TEST_ADD (suitename, "xaccTransGetAccountConvRate", Fixture, NULL, setup, test_xaccTransGetAccountConvRate, teardown);
     GNC_TEST_ADD (suitename, "xaccTransGetAccountBalance", Fixture, NULL, setup, test_xaccTransGetAccountBalance, teardown);

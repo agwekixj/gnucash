@@ -59,7 +59,7 @@ static QofLogModule log_module = GNC_MOD_GUI;
 #include <locale.h>
 #include <gnc-locale-utils.hpp>
 
-/* GNC_VCS is defined whenever we're building from an svn/svk/git/bzr tree */
+/* GNC_VCS is defined whenever we're building from a git work tree */
 #ifdef GNC_VCS
 constexpr int is_development_version = TRUE;
 #else
@@ -175,10 +175,10 @@ Gnucash::CoreApp::CoreApp (const char* app_name) : m_app_name {app_name}
      * The user may have configured a different language via
      * the environment file.
      */
+    gnc_environment_setup();
     #if defined MAC_INTEGRATION || defined __MINGW32__
     sys_locale = set_platform_locale();
     #endif
-    gnc_environment_setup();
     #if ! defined MAC_INTEGRATION && ! defined __MINGW32__/* setlocale already done */
     sys_locale = g_strdup (setlocale (LC_ALL, ""));
     if (!sys_locale)

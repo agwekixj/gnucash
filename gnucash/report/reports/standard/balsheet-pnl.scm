@@ -408,13 +408,13 @@ also show overall period profit & loss."))
            (lp rest
                (let ((converted (and show-orig-cur? convert-curr-fn
                                      (convert-curr-fn monetary col-datum))))
-                 (cons* (gnc:html-markup-br)
-                        (if anchor
+                 (cons* (if anchor
                             (gnc:html-markup-anchor anchor (or converted monetary))
                             (or converted monetary))
                         (if converted
                             (gnc:html-markup-i (gnc:html-markup "small" monetary " "))
                             "")
+                        (if (null? accum) "" (gnc:html-markup-br))
                         accum)))))))
 
   (define (account->depth acc)
@@ -736,22 +736,10 @@ also show overall period profit & loss."))
               (cons acc (map col-datum-get-split-balance-with-closing cols-data))))
            accounts-cols-data))
 
-         ;; generate an exchange-fn for date, and cache its result.
-         (get-date-exchange-fn
-          (let ((h (make-hash-table))
-                (commodities (sort-and-delete-duplicates
-                              (map xaccAccountGetCommodity accounts)
-                              (lambda (a b)
-                                (gnc:string-locale<? (gnc-commodity-get-unique-name a)
-                                                     (gnc-commodity-get-unique-name b)))
-                              gnc-commodity-equal)))
-            (lambda (date)
-              (or (hashv-ref h date)
-                  (let ((exchangefn (gnc:case-exchange-time-fn
-                                     price-source common-currency commodities
-                                     date #f #f)))
-                    (hashv-set! h date exchangefn)
-                    exchangefn)))))
+         ;; generate an exchange-fn
+         (exchange-fn (gnc:case-exchange-time-fn price-source common-currency
+                                                 (gnc:accounts-get-commodities accounts #f)
+                                                 #f #f #f))
 
          ;; from col-idx, find effective date to retrieve pricedb
          ;; entry or to limit transactions to calculate average-cost
@@ -777,8 +765,7 @@ also show overall period profit & loss."))
                        (gnc:gnc-monetary-commodity monetary)
                        common-currency))
                  (has-price? (gnc:gnc-monetary-commodity monetary))
-                 (let* ((col-date (col-idx->price-date col-idx))
-                        (exchange-fn (get-date-exchange-fn col-date)))
+                 (let ((col-date (col-idx->price-date col-idx)))
                    (exchange-fn monetary common-currency col-date)))))
 
          ;; the following function generates an gnc:html-text object

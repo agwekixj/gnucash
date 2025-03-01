@@ -122,7 +122,8 @@ gnc_autoclear_get_splits (Account *account, gnc_numeric toclear_value,
     DUP_LIST = g_list_prepend (NULL, NULL);
 
     /* Extract which splits are not cleared and compute the amount we have to clear */
-    for (GList *node = xaccAccountGetSplitList (account); node; node = node->next)
+    GList *acc_splits = xaccAccountGetSplitList (account);
+    for (GList *node = acc_splits; node; node = node->next)
     {
         Split *split = (Split *)node->data;
         gnc_numeric amount = xaccSplitGetAmount (split);
@@ -142,6 +143,7 @@ gnc_autoclear_get_splits (Account *account, gnc_numeric toclear_value,
         else
             nc_list = g_list_prepend (nc_list, split);
     }
+    g_list_free (acc_splits);
 
     if (gnc_numeric_zero_p (toclear_value))
     {

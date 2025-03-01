@@ -4,14 +4,15 @@
 # Geert Janssens <geert@kobaltwit.be>, 2020, 2021.
 # eol <joshua.de.clercq@gmail.com>, 2021.
 # Jaimie85 <alsemgeest@gmail.com>, 2022.
-# Stephan Paternotte <stephan@paternottes.net>, 2023.
+# Stephan Paternotte <stephan@paternottes.net>, 2023, 2024.
+# Paul Oranje <por@oranjevos.nl>, 2024.
 msgid ""
 msgstr ""
-"Project-Id-Version: GnuCash 5.4\n"
-"Report-Msgid-Bugs-To: https://bugs.gnucash.org/enter_bug.cgi?"
-"product=GnuCash&component=Translations\n"
-"POT-Creation-Date: 2023-09-25 08:00+0200\n"
-"PO-Revision-Date: 2023-07-08 13:48+0000\n"
+"Project-Id-Version: GnuCash 5.6\n"
+"Report-Msgid-Bugs-To: https://bugs.gnucash.org/enter_bug."
+"cgi?product=GnuCash&component=Translations\n"
+"POT-Creation-Date: 2024-06-22 06:24+0200\n"
+"PO-Revision-Date: 2024-06-25 19:09+0000\n"
 "Last-Translator: Stephan Paternotte <stephan@paternottes.net>\n"
 "Language-Team: Dutch <https://hosted.weblate.org/projects/gnucash/glossary/"
 "nl/>\n"
@@ -20,7 +21,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 5.0-dev\n"
+"X-Generator: Weblate 5.6-rc\n"
 
 #. "English Definition (Dear translators: This file will never be visible to normal users! It should only serve as a tool for translators. E.g. matching terms from this file are displayed in Weblate's Translation pages of other GnuCash components like the program.)"
 msgid "Term"
@@ -72,11 +73,11 @@ msgstr "rekening type: Eigen kapitaal"
 
 #. "-"
 msgid "account type: Expense"
-msgstr "rekening type: Uitgaven"
+msgstr "rekeningtype: Uitgaven"
 
 #. "-"
 msgid "account type: Income"
-msgstr "rekening type: Inkomsten"
+msgstr "rekeningtype: Inkomsten"
 
 #. "A debt, a financial obligation, but see also 'account type: Passive'"
 msgid "account type: Liability"
@@ -733,6 +734,10 @@ msgstr "controleren en repareren"
 #. "A document or certificate showing who owns shares"
 msgid "security"
 msgstr "waardepapier"
+
+#. "Selling borrowed units in the hope that when you buy them back later it will be at a lower price."
+msgid "Sell short"
+msgstr "Korte termijnverkoop"
 
 #. "-"
 msgid "Share Balance (register)"
