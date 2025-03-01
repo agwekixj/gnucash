@@ -427,6 +427,26 @@ days_in_month(int month, int year)
     return gnc_date_get_last_mday(month, year + 1900);
 }
 
+static int
+get_last_day_of_month(struct tm& now)
+{
+   /* Ensure that the month is between 0 and 11*/
+   auto year_delta = (now.tm_mon / 12) + (now.tm_mon < 0 ? -1 : 0);
+   return days_in_month(now.tm_mon - (12 * year_delta), now.tm_year + year_delta);
+}
+
+static void
+set_last_day_in_month(struct tm& now)
+{
+    now.tm_mday = get_last_day_of_month(now);
+}
+
+static bool
+is_last_day_in_month(struct tm& now)
+{
+    return now.tm_mday == get_last_day_of_month(now);
+}
+
 /* Normalize the modified struct tm computed in gnc_relative_date_to_time64
  * before setting the time and perhaps beginning/end of the month. Using the
  * gnc_date API would involve multiple conversions to and from struct tm.
@@ -463,6 +483,39 @@ normalize_reldate_tm(struct tm& now)
     }
 }
 
+static void
+reldate_set_day_and_time(
+        struct tm& now,
+        RelativeDateType type,
+        bool is_offset_quarter,
+        struct tm& acct_per)
+{
+    if (type == RelativeDateType::START)
+    {
+        now.tm_mday = 1;
+        if (is_offset_quarter)
+        {
+            set_last_day_in_month(now);
+            if (!is_last_day_in_month(acct_per) && now.tm_mday > acct_per.tm_mday)
+                now.tm_mday = acct_per.tm_mday;
+        }
+        gnc_tm_set_day_start(&now);
+    }
+    else if (type == RelativeDateType::END)
+    {
+        set_last_day_in_month(now);
+        if (is_offset_quarter)
+        {
+            if (is_last_day_in_month(acct_per))
+                --now.tm_mday;
+            else if (now.tm_mday >= acct_per.tm_mday)
+                now.tm_mday = acct_per.tm_mday - 1;
+        }
+        gnc_tm_set_day_end(&now);
+    }
+    // Do nothing for LAST and NEXT.
+};
+
 time64
 gnc_relative_date_to_time64(RelativeDatePeriod period)
 {
@@ -477,14 +530,13 @@ gnc_relative_date_to_time64(RelativeDatePeriod period)
     if (period == RelativeDatePeriod::TODAY)
         return static_cast<time64>(now_t);
     auto now{static_cast<tm>(now_t)};
+    bool is_offset_quarter = false;
     struct tm acct_per{};
     if (gnc_prefs_get_bool (GNC_PREFS_GROUP_ACCT_SUMMARY,
                             GNC_PREF_START_CHOICE_ABS))
         acct_per = static_cast<tm>(GncDateTime(gnc_accounting_period_fiscal_start()));
 
-    RelativeDateOffset offset = reldate_offset(period);
-
-    switch(offset)
+    switch(reldate_offset(period))
     {
         case RelativeDateOffset::NONE:
             // Report on today so nothing to do
@@ -508,8 +560,16 @@ gnc_relative_date_to_time64(RelativeDatePeriod period)
         case RelativeDateOffset::QUARTER:
         {
             auto delta = (12 + now.tm_mon - acct_per.tm_mon) % 3;
-            if (delta == 0 && now.tm_mday < acct_per.tm_mday) 
-                delta = 3;
+            if (acct_per.tm_mday > 1)
+            {
+                is_offset_quarter = true;
+                if (delta == 0 && !is_last_day_in_month(now) && 
+                    (is_last_day_in_month(acct_per) ||
+                     now.tm_mday < acct_per.tm_mday))
+                    delta = 3;
+                if (gnc_relative_date_is_ending(period))
+                    --delta;
+            }
             now.tm_mon -= delta;
         }
             [[fallthrough]];
@@ -519,7 +579,7 @@ gnc_relative_date_to_time64(RelativeDatePeriod period)
             else if (reldate_is_next(period))
                 now.tm_mon += 3;
             if (gnc_relative_date_is_ending(period))
-                now.tm_mon += (offset == RelativeDateOffset::QUARTER && acct_per.tm_mday > 1 ? 3 : 2);
+                now.tm_mon += 2;
             break;
         case RelativeDateOffset::MONTH:
             if (reldate_is_prev(period))
@@ -533,31 +593,10 @@ gnc_relative_date_to_time64(RelativeDatePeriod period)
             else if (reldate_is_next(period))
                 now.tm_mday += 7;
     }
-
-    switch (checked_reldate(period).m_type)
-    {
-        case RelativeDateType::ABSOLUTE:
-	case RelativeDateType::LAST:
-        case RelativeDateType::NEXT:
-            // Do nothing
-            break;
-        case RelativeDateType::START:
-            now.tm_mday = offset == RelativeDateOffset::QUARTER && acct_per.tm_mday > 1 ? acct_per.tm_mday : 1;
-            gnc_tm_set_day_start(&now);
-            break;
-        case RelativeDateType::END:
-        {
-            /* Ensure that the month is between 0 and 11*/
-            auto year_delta = (now.tm_mon / 12) + (now.tm_mon < 0 ? -1 : 0);
-            auto month = now.tm_mon - (12 * year_delta);
-            auto year = now.tm_year + year_delta;
-            now.tm_mday = days_in_month(month, year);
-            if (offset == RelativeDateOffset::QUARTER && acct_per.tm_mday > 1 && acct_per.tm_mday <= now.tm_mday)
-                now.tm_mday = acct_per.tm_mday - 1;
-            gnc_tm_set_day_end(&now);
-        }
-    }
-
+    reldate_set_day_and_time( now,
+                              checked_reldate(period).m_type,
+                              is_offset_quarter,
+                              acct_per);
     normalize_reldate_tm(now);
     return static_cast<time64>(GncDateTime(now));
 }
