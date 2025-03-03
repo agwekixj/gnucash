@@ -966,6 +966,10 @@ TEST(GncOptionDate, test_gnc_relative_date_to_time64)
     time1 = time64_from_gdate(&date, DayPart::end);
     EXPECT_EQ(time1,
               gnc_relative_date_to_time64(RelativeDatePeriod::END_PREV_MONTH));
+#if 0    
+
+    These tests are nolonger valid as the relative quarter start date floats 
+
     g_date_set_time_t(&date, time(nullptr));
     gnc_gdate_set_quarter_start(&date);
     time1 = time64_from_gdate(&date, DayPart::start);
@@ -989,6 +993,7 @@ TEST(GncOptionDate, test_gnc_relative_date_to_time64)
     time1 = time64_from_gdate(&date, DayPart::end);
     EXPECT_EQ(time1,
               gnc_relative_date_to_time64(RelativeDatePeriod::END_PREV_QUARTER));
+#endif
     g_date_set_time_t(&date, time(nullptr));
     gnc_gdate_set_year_start(&date);
     time1 = time64_from_gdate(&date, DayPart::start);
@@ -1221,6 +1226,10 @@ TEST_F(GncDateOption, test_stream_in_prev_month_end)
     EXPECT_EQ(time1, m_option.get_value<time64>());
 }
 
+#if 0    
+
+    These tests are nolonger valid as the relative quarter start date floats 
+
 TEST_F(GncDateOption, test_stream_in_quarter_start)
 {
     GDate date;
@@ -1264,6 +1273,7 @@ TEST_F(GncDateOption, test_stream_in_prev_quarter_end)
     iss >> m_option;
     EXPECT_EQ(time1, m_option.get_value<time64>());
 }
+#endif
 
 TEST_F(GncDateOption, test_stream_in_year_start)
 {
